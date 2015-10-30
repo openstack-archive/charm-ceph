@@ -1,0 +1,7 @@
+testtools
+coverage
+mock
+flake8==2.1.0
+# No version required
+charm-tools
+os-testr
