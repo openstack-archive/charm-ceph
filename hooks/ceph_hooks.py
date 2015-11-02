@@ -146,8 +146,8 @@ def config_changed():
         umount(e_mountpoint)
 
     osd_journal = config('osd-journal')
-    if (osd_journal and not os.path.exists(JOURNAL_ZAPPED)
-            and os.path.exists(osd_journal)):
+    if (osd_journal and not os.path.exists(JOURNAL_ZAPPED) and
+            os.path.exists(osd_journal)):
         ceph.zap_disk(osd_journal)
         with open(JOURNAL_ZAPPED, 'w') as zapped:
             zapped.write('DONE')
