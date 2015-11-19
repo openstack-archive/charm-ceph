@@ -286,6 +286,7 @@ def osd_relation(relid=None):
         log('mon cluster not in quorum - deferring fsid provision')
 
 
+@hooks.hook('radosgw-relation-changed')
 @hooks.hook('radosgw-relation-joined')
 def radosgw_relation(relid=None):
     # Install radosgw for admin tools
