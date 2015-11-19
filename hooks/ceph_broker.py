@@ -12,6 +12,7 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.contrib.storage.linux.ceph import (
     create_pool,
+    get_osds,
     pool_exists,
 )
 
@@ -90,6 +91,11 @@ def process_requests_v1(reqs):
             # Optional params
             pg_num = req.get('pg_num')
             if pg_num:
+                # Cap pg_num to max allowed just in case.
+                osds = get_osds(svc)
+                if osds:
+                    pg_num = min(pg_num, (len(osds) * 100 // replicas))
+
                 # Ensure string
                 pg_num = str(pg_num)
 
