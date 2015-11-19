@@ -63,33 +63,53 @@ def service_reload(service_name, restart_on_failure=False):
     return service_result
 
 
-def service_pause(service_name, init_dir=None):
+def service_pause(service_name, init_dir="/etc/init", initd_dir="/etc/init.d"):
     """Pause a system service.
 
     Stop it, and prevent it from starting again at boot."""
-    if init_dir is None:
-        init_dir = "/etc/init"
-    stopped = service_stop(service_name)
-    # XXX: Support systemd too
-    override_path = os.path.join(
-        init_dir, '{}.override'.format(service_name))
-    with open(override_path, 'w') as fh:
-        fh.write("manual\n")
+    stopped = True
+    if service_running(service_name):
+        stopped = service_stop(service_name)
+    upstart_file = os.path.join(init_dir, "{}.conf".format(service_name))
+    sysv_file = os.path.join(initd_dir, service_name)
+    if os.path.exists(upstart_file):
+        override_path = os.path.join(
+            init_dir, '{}.override'.format(service_name))
+        with open(override_path, 'w') as fh:
+            fh.write("manual\n")
+    elif os.path.exists(sysv_file):
+        subprocess.check_call(["update-rc.d", service_name, "disable"])
+    else:
+        # XXX: Support SystemD too
+        raise ValueError(
+            "Unable to detect {0} as either Upstart {1} or SysV {2}".format(
+                service_name, upstart_file, sysv_file))
     return stopped
 
 
-def service_resume(service_name, init_dir=None):
+def service_resume(service_name, init_dir="/etc/init",
+                   initd_dir="/etc/init.d"):
     """Resume a system service.
 
     Reenable starting again at boot. Start the service"""
-    # XXX: Support systemd too
-    if init_dir is None:
-        init_dir = "/etc/init"
-    override_path = os.path.join(
-        init_dir, '{}.override'.format(service_name))
-    if os.path.exists(override_path):
-        os.unlink(override_path)
-    started = service_start(service_name)
+    upstart_file = os.path.join(init_dir, "{}.conf".format(service_name))
+    sysv_file = os.path.join(initd_dir, service_name)
+    if os.path.exists(upstart_file):
+        override_path = os.path.join(
+            init_dir, '{}.override'.format(service_name))
+        if os.path.exists(override_path):
+            os.unlink(override_path)
+    elif os.path.exists(sysv_file):
+        subprocess.check_call(["update-rc.d", service_name, "enable"])
+    else:
+        # XXX: Support SystemD too
+        raise ValueError(
+            "Unable to detect {0} as either Upstart {1} or SysV {2}".format(
+                service_name, upstart_file, sysv_file))
+
+    started = service_running(service_name)
+    if not started:
+        started = service_start(service_name)
     return started
 
 
@@ -550,7 +570,14 @@ def chdir(d):
         os.chdir(cur)
 
 
-def chownr(path, owner, group, follow_links=True):
+def chownr(path, owner, group, follow_links=True, chowntopdir=False):
+    """
+    Recursively change user and group ownership of files and directories
+    in given path. Doesn't chown path itself by default, only its children.
+
+    :param bool follow_links: Also Chown links if True
+    :param bool chowntopdir: Also chown path itself if True
+    """
     uid = pwd.getpwnam(owner).pw_uid
     gid = grp.getgrnam(group).gr_gid
     if follow_links:
@@ -558,6 +585,10 @@ def chownr(path, owner, group, follow_links=True):
     else:
         chown = os.lchown
 
+    if chowntopdir:
+        broken_symlink = os.path.lexists(path) and not os.path.exists(path)
+        if not broken_symlink:
+            chown(path, uid, gid)
     for root, dirs, files in os.walk(path):
         for name in dirs + files:
             full = os.path.join(root, name)
@@ -568,3 +599,19 @@ def chownr(path, owner, group, follow_links=True):
 
 def lchownr(path, owner, group):
     chownr(path, owner, group, follow_links=False)
+
+
+def get_total_ram():
+    '''The total amount of system RAM in bytes.
+
+    This is what is reported by the OS, and may be overcommitted when
+    there are multiple containers hosted on the same machine.
+    '''
+    with open('/proc/meminfo', 'r') as f:
+        for line in f.readlines():
+            if line:
+                key, value, unit = line.split()
+                if key == 'MemTotal:':
+                    assert unit == 'kB', 'Unknown unit'
+                    return int(value) * 1024  # Classic, not KiB.
+        raise NotImplementedError()

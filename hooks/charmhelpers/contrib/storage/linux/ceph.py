@@ -26,6 +26,7 @@
 
 import os
 import shutil
+import six
 import json
 import time
 import uuid
@@ -58,6 +59,8 @@ from charmhelpers.core.host import (
 from charmhelpers.fetch import (
     apt_install,
 )
+
+from charmhelpers.core.kernel import modprobe
 
 KEYRING = '/etc/ceph/ceph.client.{}.keyring'
 KEYFILE = '/etc/ceph/ceph.client.{}.key'
@@ -123,29 +126,37 @@ def get_osds(service):
     return None
 
 
-def create_pool(service, name, replicas=3):
+def update_pool(client, pool, settings):
+    cmd = ['ceph', '--id', client, 'osd', 'pool', 'set', pool]
+    for k, v in six.iteritems(settings):
+        cmd.append(k)
+        cmd.append(v)
+
+    check_call(cmd)
+
+
+def create_pool(service, name, replicas=3, pg_num=None):
     """Create a new RADOS pool."""
     if pool_exists(service, name):
         log("Ceph pool {} already exists, skipping creation".format(name),
             level=WARNING)
         return
 
-    # Calculate the number of placement groups based
-    # on upstream recommended best practices.
-    osds = get_osds(service)
-    if osds:
-        pgnum = (len(osds) * 100 // replicas)
-    else:
-        # NOTE(james-page): Default to 200 for older ceph versions
-        # which don't support OSD query from cli
-        pgnum = 200
+    if not pg_num:
+        # Calculate the number of placement groups based
+        # on upstream recommended best practices.
+        osds = get_osds(service)
+        if osds:
+            pg_num = (len(osds) * 100 // replicas)
+        else:
+            # NOTE(james-page): Default to 200 for older ceph versions
+            # which don't support OSD query from cli
+            pg_num = 200
 
-    cmd = ['ceph', '--id', service, 'osd', 'pool', 'create', name, str(pgnum)]
+    cmd = ['ceph', '--id', service, 'osd', 'pool', 'create', name, str(pg_num)]
     check_call(cmd)
 
-    cmd = ['ceph', '--id', service, 'osd', 'pool', 'set', name, 'size',
-           str(replicas)]
-    check_call(cmd)
+    update_pool(service, name, settings={'size': str(replicas)})
 
 
 def delete_pool(service, name):
@@ -200,10 +211,10 @@ def create_key_file(service, key):
     log('Created new keyfile at %s.' % keyfile, level=INFO)
 
 
-def get_ceph_nodes():
-    """Query named relation 'ceph' to determine current nodes."""
+def get_ceph_nodes(relation='ceph'):
+    """Query named relation to determine current nodes."""
     hosts = []
-    for r_id in relation_ids('ceph'):
+    for r_id in relation_ids(relation):
         for unit in related_units(r_id):
             hosts.append(relation_get('private-address', unit=unit, rid=r_id))
 
@@ -291,17 +302,6 @@ def place_data_on_block_device(blk_device, data_src_dst):
     os.chown(data_src_dst, uid, gid)
 
 
-# TODO: re-use
-def modprobe(module):
-    """Load a kernel module and configure for auto-load on reboot."""
-    log('Loading kernel module', level=INFO)
-    cmd = ['modprobe', module]
-    check_call(cmd)
-    with open('/etc/modules', 'r+') as modules:
-        if module not in modules.read():
-            modules.write(module)
-
-
 def copy_files(src, dst, symlinks=False, ignore=None):
     """Copy files from src to dst."""
     for item in os.listdir(src):
@@ -366,14 +366,14 @@ def ensure_ceph_storage(service, pool, rbd_img, sizemb, mount_point,
             service_start(svc)
 
 
-def ensure_ceph_keyring(service, user=None, group=None):
+def ensure_ceph_keyring(service, user=None, group=None, relation='ceph'):
     """Ensures a ceph keyring is created for a named service and optionally
     ensures user and group ownership.
 
     Returns False if no ceph key is available in relation state.
     """
     key = None
-    for rid in relation_ids('ceph'):
+    for rid in relation_ids(relation):
         for unit in related_units(rid):
             key = relation_get('key', rid=rid, unit=unit)
             if key:
@@ -549,7 +549,7 @@ def get_previous_request(rid):
     return request
 
 
-def get_request_states(request):
+def get_request_states(request, relation='ceph'):
     """Return a dict of requests per relation id with their corresponding
        completion state.
 
@@ -561,7 +561,7 @@ def get_request_states(request):
     """
     complete = []
     requests = {}
-    for rid in relation_ids('ceph'):
+    for rid in relation_ids(relation):
         complete = False
         previous_request = get_previous_request(rid)
         if request == previous_request:
@@ -579,14 +579,14 @@ def get_request_states(request):
     return requests
 
 
-def is_request_sent(request):
+def is_request_sent(request, relation='ceph'):
     """Check to see if a functionally equivalent request has already been sent
 
     Returns True if a similair request has been sent
 
     @param request: A CephBrokerRq object
     """
-    states = get_request_states(request)
+    states = get_request_states(request, relation=relation)
     for rid in states.keys():
         if not states[rid]['sent']:
             return False
@@ -594,7 +594,7 @@ def is_request_sent(request):
     return True
 
 
-def is_request_complete(request):
+def is_request_complete(request, relation='ceph'):
     """Check to see if a functionally equivalent request has already been
     completed
 
@@ -602,7 +602,7 @@ def is_request_complete(request):
 
     @param request: A CephBrokerRq object
     """
-    states = get_request_states(request)
+    states = get_request_states(request, relation=relation)
     for rid in states.keys():
         if not states[rid]['complete']:
             return False
@@ -652,15 +652,15 @@ def get_broker_rsp_key():
     return 'broker-rsp-' + local_unit().replace('/', '-')
 
 
-def send_request_if_needed(request):
+def send_request_if_needed(request, relation='ceph'):
     """Send broker request if an equivalent request has not already been sent
 
     @param request: A CephBrokerRq object
     """
-    if is_request_sent(request):
+    if is_request_sent(request, relation=relation):
         log('Request already sent but not complete, not sending new request',
             level=DEBUG)
     else:
-        for rid in relation_ids('ceph'):
+        for rid in relation_ids(relation):
             log('Sending request {}'.format(request.request_id), level=DEBUG)
             relation_set(relation_id=rid, broker_req=request.request)
