@@ -83,12 +83,21 @@ def process_requests_v1(reqs):
                 log(msg, level=ERROR)
                 return {'exit-code': 1, 'stderr': msg}
 
+            # Mandatory params
             pool = params['pool']
             replicas = params['replicas']
+
+            # Optional params
+            pg_num = req.get('pg_num')
+            if pg_num:
+                # Ensure string
+                pg_num = str(pg_num)
+
             if not pool_exists(service=svc, name=pool):
                 log("Creating pool '%s' (replicas=%s)" % (pool, replicas),
                     level=INFO)
-                create_pool(service=svc, name=pool, replicas=replicas)
+                create_pool(service=svc, name=pool, replicas=replicas,
+                            pg_num=pg_num)
             else:
                 log("Pool '%s' already exists - skipping create" % (pool),
                     level=DEBUG)

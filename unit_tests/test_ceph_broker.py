@@ -53,7 +53,24 @@ class CephBrokerTestCase(unittest.TestCase):
         rc = ceph_broker.process_requests(reqs)
         mock_pool_exists.assert_called_with(service='admin', name='foo')
         mock_create_pool.assert_called_with(service='admin', name='foo',
-                                            replicas=3)
+                                            replicas=3, pg_num=None)
+        self.assertEqual(json.loads(rc), {'exit-code': 0})
+
+    @mock.patch('ceph_broker.create_pool')
+    @mock.patch('ceph_broker.pool_exists')
+    @mock.patch('ceph_broker.log')
+    def test_process_requests_create_pool_w_pg_num(self, mock_log,
+                                                   mock_pool_exists,
+                                                   mock_create_pool):
+        mock_pool_exists.return_value = False
+        reqs = json.dumps({'api-version': 1,
+                           'ops': [{'op': 'create-pool', 'name':
+                                    'foo', 'replicas': 3,
+                                    'pg_num': 100}]})
+        rc = ceph_broker.process_requests(reqs)
+        mock_pool_exists.assert_called_with(service='admin', name='foo')
+        mock_create_pool.assert_called_with(service='admin', name='foo',
+                                            replicas=3, pg_num='100')
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
     @mock.patch('ceph_broker.create_pool')
@@ -84,7 +101,7 @@ class CephBrokerTestCase(unittest.TestCase):
         rc = ceph_broker.process_requests(reqs)
         mock_pool_exists.assert_called_with(service='admin', name='foo')
         mock_create_pool.assert_called_with(service='admin', name='foo',
-                                            replicas=3)
+                                            replicas=3, pg_num=None)
         self.assertEqual(json.loads(rc)['exit-code'], 0)
         self.assertEqual(json.loads(rc)['request-id'], '1ef5aede')
 
