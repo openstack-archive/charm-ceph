@@ -290,16 +290,26 @@ def osd_relation(relid=None):
 def radosgw_relation(relid=None):
     # Install radosgw for admin tools
     apt_install(packages=filter_installed_packages(['radosgw']))
+
+    """Process broker request(s)."""
     if ceph.is_quorum():
-        log('mon cluster in quorum - providing radosgw with keys')
-        data = {
-            'fsid': config('fsid'),
-            'radosgw_key': ceph.get_radosgw_key(),
-            'auth': config('auth-supported'),
-            'ceph-public-address': get_public_addr(),
-        }
-        relation_set(relation_id=relid,
-                     relation_settings=data)
+        settings = relation_get(rid=relid)
+        if 'broker_req' in settings:
+            if not ceph.is_leader():
+                log("Not leader - ignoring broker request", level=DEBUG)
+            else:
+                rsp = process_requests(settings['broker_req'])
+                unit_id = remote_unit().replace('/', '-')
+                unit_response_key = 'broker-rsp-' + unit_id
+                log('mon cluster in quorum - providing radosgw with keys')
+                data = {
+                    'fsid': config('fsid'),
+                    'radosgw_key': ceph.get_radosgw_key(),
+                    'auth': config('auth-supported'),
+                    'ceph-public-address': get_public_addr(),
+                    unit_response_key: rsp,
+                }
+                relation_set(relation_id=relid, relation_settings=data)
     else:
         log('mon cluster not in quorum - deferring key provision')
 
