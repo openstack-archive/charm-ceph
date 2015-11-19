@@ -491,6 +491,19 @@ def relation_types():
 
 
 @cached
+def peer_relation_id():
+    '''Get a peer relation id if a peer relation has been joined, else None.'''
+    md = metadata()
+    section = md.get('peers')
+    if section:
+        for key in section:
+            relids = relation_ids(key)
+            if relids:
+                return relids[0]
+    return None
+
+
+@cached
 def relation_to_interface(relation_name):
     """
     Given the name of a relation, return the interface that relation uses.
@@ -621,6 +634,38 @@ def unit_public_ip():
 def unit_private_ip():
     """Get this unit's private IP address"""
     return unit_get('private-address')
+
+
+@cached
+def storage_get(attribute="", storage_id=""):
+    """Get storage attributes"""
+    _args = ['storage-get', '--format=json']
+    if storage_id:
+        _args.extend(('-s', storage_id))
+    if attribute:
+        _args.append(attribute)
+    try:
+        return json.loads(subprocess.check_output(_args).decode('UTF-8'))
+    except ValueError:
+        return None
+
+
+@cached
+def storage_list(storage_name=""):
+    """List the storage IDs for the unit"""
+    _args = ['storage-list', '--format=json']
+    if storage_name:
+        _args.append(storage_name)
+    try:
+        return json.loads(subprocess.check_output(_args).decode('UTF-8'))
+    except ValueError:
+        return None
+    except OSError as e:
+        import errno
+        if e.errno == errno.ENOENT:
+            # storage-list does not exist
+            return []
+        raise
 
 
 class UnregisteredHookError(Exception):
@@ -788,6 +833,7 @@ def status_get():
 
 def translate_exc(from_exc, to_exc):
     def inner_translate_exc1(f):
+        @wraps(f)
         def inner_translate_exc2(*args, **kwargs):
             try:
                 return f(*args, **kwargs)
