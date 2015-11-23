@@ -29,6 +29,8 @@ from charmhelpers.core.hookenv import (
     relations_of_type,
     status_set,
     local_unit,
+    storage_get,
+    storage_list
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -145,7 +147,7 @@ def config_changed():
     if e_mountpoint and ceph.filesystem_mounted(e_mountpoint):
         umount(e_mountpoint)
 
-    osd_journal = config('osd-journal')
+    osd_journal = get_osd_journal()
     if (osd_journal and not os.path.exists(JOURNAL_ZAPPED) and
             os.path.exists(osd_journal)):
         ceph.zap_disk(osd_journal)
@@ -158,14 +160,34 @@ def config_changed():
         ceph.bootstrap_monitor_cluster(config('monitor-secret'))
         ceph.wait_for_bootstrap()
 
-    if ceph.is_bootstrapped():
-        for dev in get_devices():
-            ceph.osdize(dev, config('osd-format'), config('osd-journal'),
-                        reformat_osd(), config('ignore-device-errors'))
-        ceph.start_osds(get_devices())
+    storage_changed()
 
     if relations_of_type('nrpe-external-master'):
         update_nrpe_config()
+
+
+@hooks.hook('osd-devices-storage-attached', 'osd-devices-storage-detaching')
+def storage_changed():
+    if ceph.is_bootstrapped():
+        for dev in get_devices():
+            ceph.osdize(dev, config('osd-format'), get_osd_journal(),
+                        reformat_osd(), config('ignore-device-errors'))
+        ceph.start_osds(get_devices())
+
+
+def get_osd_journal():
+    '''
+    Returns the block device path to use for the OSD journal, if any.
+
+    If there is an osd-journal storage instance attached, it will be
+    used as the journal. Otherwise, the osd-journal configuration will
+    be returned.
+    '''
+    storage_ids = storage_list('osd-journal')
+    if storage_ids:
+        # There can be at most one osd-journal storage instance.
+        return storage_get('location', storage_ids[0])
+    return config('osd-journal')
 
 
 def get_mon_hosts():
@@ -207,9 +229,15 @@ def reformat_osd():
 
 def get_devices():
     if config('osd-devices'):
-        return config('osd-devices').split(' ')
+        devices = config('osd-devices').split(' ')
     else:
-        return []
+        devices = []
+    # List storage instances for the 'osd-devices'
+    # store declared for this charm too, and add
+    # their block device paths to the list.
+    storage_ids = storage_list('osd-devices')
+    devices.extend((storage_get('location', s) for s in storage_ids))
+    return devices
 
 
 @hooks.hook('mon-relation-joined')
@@ -231,7 +259,7 @@ def mon_relation():
         ceph.bootstrap_monitor_cluster(config('monitor-secret'))
         ceph.wait_for_bootstrap()
         for dev in get_devices():
-            ceph.osdize(dev, config('osd-format'), config('osd-journal'),
+            ceph.osdize(dev, config('osd-format'), get_osd_journal(),
                         reformat_osd(), config('ignore-device-errors'))
         ceph.start_osds(get_devices())
         notify_osds()
