@@ -25,3 +25,12 @@ provides:
   nrpe-external-master:
     interface: nrpe-external-master
     scope: container
+storage:
+  osd-devices:
+    type: block
+    multiple:
+      range: 0-
+  osd-journal:
+    type: block
+    multiple:
+      range: 0-1
