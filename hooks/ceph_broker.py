@@ -198,7 +198,7 @@ def handle_create_erasure_profile(request, service):
 
     create_erasure_profile(service=service, erasure_plugin_name=erasure_type,
                            profile_name=name, failure_domain=failure_domain,
-                           k=k, m=m, l=l)
+                           data_chunks=k, coding_chunks=m, locality=l)
 
 
 def handle_erasure_pool(request, service):
@@ -278,8 +278,18 @@ def handle_create_cache_tier(request, service):
 
 
 def handle_remove_cache_tier(request, service):
-    pool = Pool(name='something')
-    pool.remove_cache_tier('cache_pool')
+    storage_pool = request.get('cold-pool')
+    cache_pool = request.get('hot-pool')
+    # cache and storage pool must exist first
+    if not pool_exists(service=service, name=storage_pool) or not pool_exists(
+            service=service, name=cache_pool):
+        msg = "cold-pool: {} or hot-pool: {} doesn't exist. Not " \
+              "deleting cache tier".format(storage_pool, cache_pool)
+        log(msg, level=ERROR)
+        return {'exit-code': 1, 'stderr': msg}
+
+    pool = Pool(name=storage_pool, service=service)
+    pool.remove_cache_tier(cache_pool=cache_pool)
 
 
 def handle_set_pool_value(request, service):
