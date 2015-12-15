@@ -4,8 +4,10 @@
 #
 import json
 
-from charmhelpers.contrib.storage.linux.ceph import validator, erasure_profile_exists, ErasurePool, set_pool_quota, \
-    pool_set, snapshot_pool, remove_pool_snapshot, create_erasure_profile, ReplicatedPool, rename_pool, Pool
+from charmhelpers.contrib.storage.linux.ceph import validator, \
+    erasure_profile_exists, ErasurePool, set_pool_quota, \
+    pool_set, snapshot_pool, remove_pool_snapshot, create_erasure_profile, \
+    ReplicatedPool, rename_pool, Pool
 
 from charmhelpers.core.hookenv import (
     log,
