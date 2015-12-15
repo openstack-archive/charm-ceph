@@ -1,0 +1,32 @@
+#!/usr/bin/python2.7
+import sys
+
+sys.path.append('hooks')
+from subprocess import CalledProcessError
+from charmhelpers.core.hookenv import action_get, log
+from charmhelpers.contrib.storage.linux.ceph import ErasurePool, ReplicatedPool
+
+
+def create_pool():
+    pool_name = action_get("name")
+    pool_type = action_get("pool-type")
+    try:
+        if pool_type == "replicated":
+            replicas = action_get("replicas")
+            replicated_pool = ReplicatedPool(name=pool_name, service='admin', replicas=replicas)
+            replicated_pool.create()
+
+        elif pool_type == "erasure":
+            crush_profile_name = action_get("erasure_profile_name")
+            erasure_pool = ErasurePool(name=pool_name,
+                                       erasure_code_profile=crush_profile_name, service='admin')
+            erasure_pool.create()
+        else:
+            log("Unknown pool type of {}. Only erasure or replicated is allowed".format(pool_type))
+            sys.exit(-1)
+    except CalledProcessError as e:
+        sys.exit(e.returncode)
+
+
+if __name__ == '__main__':
+    create_pool()

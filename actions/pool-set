@@ -1,0 +1,17 @@
+#!/usr/bin/python2.7
+import sys
+
+sys.path.append('hooks')
+
+from charmhelpers.core.hookenv import action_get
+from ceph_broker import handle_set_pool_value
+
+if __name__ == '__main__':
+    name = action_get("pool-name")
+    key = action_get("key")
+    value = action_get("value")
+    request = {'name': name,
+               'key': key,
+               'value': value}
+
+    handle_set_pool_value(service='admin', request=request)

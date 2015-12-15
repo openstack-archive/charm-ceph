@@ -1,0 +1,16 @@
+#!/usr/bin/python2.7
+__author__ = 'chris'
+import sys
+from subprocess import check_output, CalledProcessError
+
+sys.path.append('hooks')
+
+from charmhelpers.core.hookenv import log, action_set
+
+if __name__ == '__main__':
+    try:
+        out = check_output(['ceph', '--id', 'admin',
+                            'osd', 'lspools']).decode('UTF-8')
+        action_set({'message': out})
+    except CalledProcessError as e:
+        log(e)

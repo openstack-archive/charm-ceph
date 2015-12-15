@@ -296,7 +296,7 @@ def get_nagios_hostcontext(relation_name='nrpe-external-master'):
     :param str relation_name: Name of relation nrpe sub joined to
     """
     for rel in relations_of_type(relation_name):
-        if 'nagios_hostname' in rel:
+        if 'nagios_host_context' in rel:
             return rel['nagios_host_context']
 
 
@@ -337,11 +337,13 @@ def add_init_service_checks(nrpe, services, unit_name):
         upstart_init = '/etc/init/%s.conf' % svc
         sysv_init = '/etc/init.d/%s' % svc
         if os.path.exists(upstart_init):
-            nrpe.add_check(
-                shortname=svc,
-                description='process check {%s}' % unit_name,
-                check_cmd='check_upstart_job %s' % svc
-            )
+            # Don't add a check for these services from neutron-gateway
+            if svc not in ['ext-port', 'os-charm-phy-nic-mtu']:
+                nrpe.add_check(
+                    shortname=svc,
+                    description='process check {%s}' % unit_name,
+                    check_cmd='check_upstart_job %s' % svc
+                )
         elif os.path.exists(sysv_init):
             cronpath = '/etc/cron.d/nagios-service-check-%s' % svc
             cron_file = ('*/5 * * * * root '

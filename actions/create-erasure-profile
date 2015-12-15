@@ -1,0 +1,62 @@
+#!/usr/bin/python2.7
+from subprocess import CalledProcessError
+import sys
+
+sys.path.append('hooks')
+
+from charmhelpers.contrib.storage.linux.ceph import create_erasure_profile
+from charmhelpers.core.hookenv import action_get, log
+
+
+def make_erasure_profile():
+    name = action_get("name")
+    plugin = action_get("plugin")
+    failure_domain = action_get("failure-domain")
+
+    # jerasure requires k+m
+    # isa requires k+m
+    # local requires k+m+l
+    # shec requires k+m+c
+
+    if plugin == "jerasure":
+        k = action_get("data_chunks")
+        m = action_get("coding_chunks")
+        try:
+            create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
+                                   coding_chunks=m, failure_domain=failure_domain)
+        except CalledProcessError as e:
+            log(e)
+    elif plugin == "isa":
+        k = action_get("data_chunks")
+        m = action_get("coding_chunks")
+        try:
+            create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
+                                   coding_chunks=m, failure_domain=failure_domain)
+        except CalledProcessError as e:
+            log(e)
+    elif plugin == "local":
+        k = action_get("data_chunks")
+        m = action_get("coding_chunks")
+        l = action_get("locality_chunks")
+        try:
+            create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
+                                   coding_chunks=m, locality=l, failure_domain=failure_domain)
+        except CalledProcessError as e:
+            log(e)
+    elif plugin == "shec":
+        k = action_get("data_chunks")
+        m = action_get("coding_chunks")
+        c = action_get("durability_estimator")
+        try:
+            create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
+                                   coding_chunks=m, durability_estimator=c, failure_domain=failure_domain)
+        except CalledProcessError as e:
+            log(e)
+    else:
+        # Unknown erasure plugin
+        log("Unknown erasure-plugin type of {}. Only jerasure, isa, local or shec is allowed".format(plugin))
+        sys.exit(-1)
+
+
+if __name__ == '__main__':
+    make_erasure_profile()

@@ -1,4 +1,4 @@
-name: ceph
+name: ceph-next
 summary: Highly scalable distributed storage
 maintainer: OpenStack Charmers <openstack-charmers@lists.ubuntu.com>
 description: |
