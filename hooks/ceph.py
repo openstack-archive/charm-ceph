@@ -131,10 +131,10 @@ def start_osds(devices):
     # Scan for ceph block devices
     rescan_osd_devices()
     if cmp_pkgrevno('ceph', "0.56.6") >= 0:
-        # Use ceph-disk-activate for directory based OSD's
+        # Use ceph-disk activate for directory based OSD's
         for dev_or_path in devices:
             if os.path.exists(dev_or_path) and os.path.isdir(dev_or_path):
-                subprocess.check_call(['ceph-disk-activate', dev_or_path])
+                subprocess.check_call(['ceph-disk', 'activate', dev_or_path])
 
 
 def rescan_osd_devices():
@@ -367,7 +367,7 @@ def osdize_dev(dev, osd_format, osd_journal, reformat_osd=False,
         return
 
     status_set('maintenance', 'Initializing device {}'.format(dev))
-    cmd = ['ceph-disk-prepare']
+    cmd = ['ceph-disk', 'prepare']
     # Later versions of ceph support more options
     if cmp_pkgrevno('ceph', '0.48.3') >= 0:
         if osd_format:
@@ -407,7 +407,8 @@ def osdize_dir(path):
 
     mkdir(path)
     cmd = [
-        'ceph-disk-prepare',
+        'ceph-disk',
+        'prepare',
         '--data-dir',
         path
     ]
