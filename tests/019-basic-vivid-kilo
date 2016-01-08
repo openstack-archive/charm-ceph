@@ -1,9 +1,0 @@
-#!/usr/bin/python
-
-"""Amulet tests on a basic ceph deployment on vivid-kilo."""
-
-from basic_deployment import CephBasicDeployment
-
-if __name__ == '__main__':
-    deployment = CephBasicDeployment(series='vivid')
-    deployment.run_tests()
