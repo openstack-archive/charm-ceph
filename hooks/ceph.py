@@ -11,8 +11,10 @@ import json
 import subprocess
 import time
 import os
+import re
 from charmhelpers.core.host import (
     mkdir,
+    chownr,
     service_restart,
     cmp_pkgrevno,
     lsb_release
@@ -23,6 +25,9 @@ from charmhelpers.core.hookenv import (
     WARNING,
     cached,
     status_set,
+)
+from charmhelpers.fetch import (
+    apt_cache
 )
 from charmhelpers.contrib.storage.linux.utils import (
     zap_disk,
@@ -39,10 +44,58 @@ QUORUM = [LEADER, PEON]
 
 PACKAGES = ['ceph', 'gdisk', 'ntp', 'btrfs-tools', 'python-ceph', 'xfsprogs']
 
+def ceph_user():
+    if get_version() > 1:
+        return 'ceph'
+    else:
+        return "root"
+
+
+def get_version():
+    '''Derive Ceph release from an installed package.'''
+    import apt_pkg as apt
+
+    cache = apt_cache()
+    package = "ceph"
+    try:
+        pkg = cache[package]
+    except:
+        if not fatal:
+            return None
+        # the package is unknown to the current apt cache.
+        e = 'Could not determine version of package with no installation '\
+            'candidate: %s' % package
+        error_out(e)
+
+    if not pkg.current_ver:
+        if not fatal:
+            return None
+        # package is known, but no version is currently installed.
+        e = 'Could not determine version of uninstalled package: %s' % package
+        error_out(e)
+
+    vers = apt.upstream_version(pkg.current_ver.ver_str)
+
+    # x.y match only for 20XX.X
+    # and ignore patch level for other packages
+    match = re.match('^(\d+)\.(\d+)', vers)
+
+    if match:
+        vers = match.group(0)
+    return float(vers)
+
+
+def error_out(msg):
+    juju_log("FATAL ERROR: %s" % msg, level='ERROR')
+    sys.exit(1)
+
 
 def is_quorum():
     asok = "/var/run/ceph/ceph-mon.{}.asok".format(get_unit_hostname())
     cmd = [
+        "sudo",
+        "-u",
+        ceph_user(),
         "ceph",
         "--admin-daemon",
         asok,
@@ -67,6 +120,9 @@ def is_quorum():
 def is_leader():
     asok = "/var/run/ceph/ceph-mon.{}.asok".format(get_unit_hostname())
     cmd = [
+        "sudo",
+        "-u",
+        ceph_user(),
         "ceph",
         "--admin-daemon",
         asok,
@@ -96,6 +152,9 @@ def wait_for_quorum():
 def add_bootstrap_hint(peer):
     asok = "/var/run/ceph/ceph-mon.{}.asok".format(get_unit_hostname())
     cmd = [
+        "sudo",
+        "-u",
+        ceph_user(),
         "ceph",
         "--admin-daemon",
         asok,
@@ -161,6 +220,9 @@ def wait_for_bootstrap():
 def import_osd_bootstrap_key(key):
     if not os.path.exists(_bootstrap_keyring):
         cmd = [
+            "sudo",
+            "-u",
+            ceph_user(),
             'ceph-authtool',
             _bootstrap_keyring,
             '--create-keyring',
@@ -219,6 +281,9 @@ _radosgw_keyring = "/etc/ceph/keyring.rados.gateway"
 def import_radosgw_key(key):
     if not os.path.exists(_radosgw_keyring):
         cmd = [
+            "sudo",
+            "-u",
+            ceph_user(),
             'ceph-authtool',
             _radosgw_keyring,
             '--create-keyring',
@@ -247,6 +312,9 @@ _default_caps = {
 def get_named_key(name, caps=None):
     caps = caps or _default_caps
     cmd = [
+        "sudo",
+        "-u",
+        ceph_user(),
         'ceph',
         '--name', 'mon.',
         '--keyring',
@@ -270,7 +338,7 @@ def upgrade_key_caps(key, caps):
         # Not the MON leader OR not clustered
         return
     cmd = [
-        'ceph', 'auth', 'caps', key
+        "sudo", "-u", ceph_user(),'ceph', 'auth', 'caps', key
     ]
     for subsystem, subcaps in caps.iteritems():
         cmd.extend([subsystem, '; '.join(subcaps)])
@@ -297,8 +365,8 @@ def bootstrap_monitor_cluster(secret):
         log('bootstrap_monitor_cluster: mon already initialized.')
     else:
         # Ceph >= 0.61.3 needs this for ceph-mon fs creation
-        mkdir('/var/run/ceph', perms=0o755)
-        mkdir(path)
+        mkdir('/var/run/ceph', owner=ceph_user(), group=ceph_user(), perms=0o755)
+        mkdir(path, owner=ceph_user(), group=ceph_user())
         # end changes for Ceph >= 0.61.3
         try:
             subprocess.check_call(['ceph-authtool', keyring,
@@ -307,9 +375,11 @@ def bootstrap_monitor_cluster(secret):
                                    '--cap', 'mon', 'allow *'])
 
             subprocess.check_call(['ceph-mon', '--mkfs',
+                                   # '--setuser', ceph_user(),
+                                   # '--setgroup', ceph_user(),
                                    '-i', hostname,
                                    '--keyring', keyring])
-
+            chownr(path, ceph_user(), ceph_user())
             with open(done, 'w'):
                 pass
             with open(init_marker, 'w'):
@@ -405,7 +475,7 @@ def osdize_dir(path):
             level=ERROR)
         raise
 
-    mkdir(path)
+    mkdir(path, owner=ceph_user(), group=ceph_user())
     cmd = [
         'ceph-disk',
         'prepare',

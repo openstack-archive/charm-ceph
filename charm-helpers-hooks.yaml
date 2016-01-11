@@ -9,6 +9,5 @@ include:
         - ceph
     - payload.execd
     - contrib.openstack.alternatives
-    - contrib.openstack.utils
     - contrib.network.ip
     - contrib.charmsupport
