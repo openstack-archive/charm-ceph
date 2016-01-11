@@ -375,8 +375,6 @@ def bootstrap_monitor_cluster(secret):
                                    '--cap', 'mon', 'allow *'])
 
             subprocess.check_call(['ceph-mon', '--mkfs',
-                                   # '--setuser', ceph_user(),
-                                   # '--setgroup', ceph_user(),
                                    '-i', hostname,
                                    '--keyring', keyring])
             chownr(path, ceph_user(), ceph_user())
