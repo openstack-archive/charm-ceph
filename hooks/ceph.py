@@ -12,6 +12,7 @@ import subprocess
 import time
 import os
 import re
+import sys
 from charmhelpers.core.host import (
     mkdir,
     chownr,
@@ -44,6 +45,7 @@ QUORUM = [LEADER, PEON]
 
 PACKAGES = ['ceph', 'gdisk', 'ntp', 'btrfs-tools', 'python-ceph', 'xfsprogs']
 
+
 def ceph_user():
     if get_version() > 1:
         return 'ceph'
@@ -60,16 +62,12 @@ def get_version():
     try:
         pkg = cache[package]
     except:
-        if not fatal:
-            return None
         # the package is unknown to the current apt cache.
         e = 'Could not determine version of package with no installation '\
             'candidate: %s' % package
         error_out(e)
 
     if not pkg.current_ver:
-        if not fatal:
-            return None
         # package is known, but no version is currently installed.
         e = 'Could not determine version of uninstalled package: %s' % package
         error_out(e)
@@ -86,7 +84,8 @@ def get_version():
 
 
 def error_out(msg):
-    juju_log("FATAL ERROR: %s" % msg, level='ERROR')
+    log("FATAL ERROR: %s" % msg,
+        level=ERROR)
     sys.exit(1)
 
 
@@ -338,7 +337,7 @@ def upgrade_key_caps(key, caps):
         # Not the MON leader OR not clustered
         return
     cmd = [
-        "sudo", "-u", ceph_user(),'ceph', 'auth', 'caps', key
+        "sudo", "-u", ceph_user(), 'ceph', 'auth', 'caps', key
     ]
     for subsystem, subcaps in caps.iteritems():
         cmd.extend([subsystem, '; '.join(subcaps)])
@@ -365,7 +364,8 @@ def bootstrap_monitor_cluster(secret):
         log('bootstrap_monitor_cluster: mon already initialized.')
     else:
         # Ceph >= 0.61.3 needs this for ceph-mon fs creation
-        mkdir('/var/run/ceph', owner=ceph_user(), group=ceph_user(), perms=0o755)
+        mkdir('/var/run/ceph', owner=ceph_user(),
+              group=ceph_user(), perms=0o755)
         mkdir(path, owner=ceph_user(), group=ceph_user())
         # end changes for Ceph >= 0.61.3
         try:
