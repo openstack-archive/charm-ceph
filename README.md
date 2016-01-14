@@ -91,7 +91,7 @@ hook to wait for all three nodes to come up, and then write their addresses
 to ceph.conf in the "mon host" parameter. After we initialize the monitor
 cluster a quorum forms quickly, and OSD bringup proceeds.
 
-The osds use so-called "OSD hotplugging". **ceph-disk-prepare** is used to
+The osds use so-called "OSD hotplugging". **ceph-disk prepare** is used to
 create the filesystems with a special GPT partition type. *udev* is set up
 to mount such filesystems and start the osd daemons as their storage becomes
 visible to the system (or after `udevadm trigger`).
