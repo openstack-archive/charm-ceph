@@ -1,0 +1,4 @@
+pause:
+  description: Pause ceph health operations
+resume:
+  description: Resume ceph health operations
