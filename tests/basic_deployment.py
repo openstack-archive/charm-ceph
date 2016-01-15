@@ -2,9 +2,7 @@
 
 import amulet
 import time
-from amulet.deployer import(
-    action_do, action_fetch
-)
+
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
 )
@@ -445,8 +443,8 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         cmd = "ceph -s"
 
         sentry_unit = self.ceph0_sentry
-        action_id = action_do(sentry_unit, 'pause')
-        action_fetch(action_id)
+        action_id = self.action_do(sentry_unit, 'pause')
+        self.action_fetch(action_id)
 
         output, code = sentry_unit.run(cmd)
         import re
@@ -454,8 +452,8 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
             amulet.raise_status(amulet.FAIL, msg="Missing noout,nodown")
 
         u.log.debug("Testing resume")
-        action_id = action_do(sentry_unit, 'resume')
-        action_fetch(action_id)
+        action_id = self.action_do(sentry_unit, 'resume')
+        self.action_fetch(action_id)
         output, code = sentry_unit.run(cmd)
         if re.match('flags nodown,noout', output) is not None:
             amulet.raise_status(amulet.FAIL, msg="Still has noout,nodown")
