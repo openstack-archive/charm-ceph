@@ -2,6 +2,9 @@
 
 import amulet
 import time
+from amulet.deployer import(
+    action_do, action_fetch
+)
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
 )
@@ -435,6 +438,27 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         else:
             u.log.debug('Pool list on all ceph units produced the '
                         'same results (OK).')
+
+    def test_402_pause_resume_actions(self):
+        """Veryfy that pause/resume works"""
+        u.log.debug("Testing pause")
+        cmd = "ceph -s"
+
+        sentry_unit = self.ceph0_sentry
+        action_id = action_do(sentry_unit, 'pause')
+        action_fetch(action_id)
+
+        output, code = sentry_unit.run(cmd)
+        import re
+        if re.match('flags nodown,noout', output) is None:
+            amulet.raise_status(amulet.FAIL, msg="Missing noout,nodown")
+
+        u.log.debug("Testing resume")
+        action_id = action_do(sentry_unit, 'resume')
+        action_fetch(action_id)
+        output, code = sentry_unit.run(cmd)
+        if re.match('flags nodown,noout', output) is not None:
+            amulet.raise_status(amulet.FAIL, msg="Still has noout,nodown")
 
     def test_410_ceph_cinder_vol_create(self):
         """Create and confirm a ceph-backed cinder volume, and inspect

@@ -3,4 +3,4 @@
 set -eux
 
 ceph osd unset nodown
-ceph osd unset nodout
+ceph osd unset noout
