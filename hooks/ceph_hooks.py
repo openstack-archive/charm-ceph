@@ -100,6 +100,7 @@ def emit_cephconf():
         'ceph_public_network': config('ceph-public-network'),
         'ceph_cluster_network': config('ceph-cluster-network'),
         'loglevel': config('loglevel'),
+        'dio': str(config('use-direct-io')).lower(),
     }
 
     if config('prefer-ipv6'):

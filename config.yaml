@@ -187,3 +187,7 @@ options:
     description: |
       A comma-separated list of nagios servicegroups.
       If left empty, the nagios_context will be used as the servicegroup
+  use-direct-io:
+    default: True
+    type: boolean
+    description: Configure use of direct IO for OSD journals.
