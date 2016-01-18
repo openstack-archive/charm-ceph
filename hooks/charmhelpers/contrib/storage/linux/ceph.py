@@ -61,7 +61,7 @@ from charmhelpers.fetch import (
     apt_install,
 )
 
-from charmhelpers.core.kernel import modprobe
+# from charmhelpers.core.kernel import modprobe
 
 KEYRING = '/etc/ceph/ceph.client.{}.keyring'
 KEYFILE = '/etc/ceph/ceph.client.{}.key'
@@ -120,6 +120,7 @@ class PoolCreationError(Exception):
     """
     A custom error to inform the caller that a pool creation failed.  Provides an error message
     """
+
     def __init__(self, message):
         super(PoolCreationError, self).__init__(message)
 
@@ -129,6 +130,7 @@ class Pool(object):
     An object oriented approach to Ceph pool creation. This base class is inherited by ReplicatedPool and ErasurePool.
     Do not call create() on this base class as it will not do anything.  Instantiate a child class and call create().
     """
+
     def __init__(self, service, name):
         self.service = service
         self.name = name
@@ -337,6 +339,22 @@ def remove_pool_quota(service, pool_name):
     :return: None.  Can raise CalledProcessError
     """
     cmd = ['ceph', '--id', service, 'osd', 'pool', 'set-quota', pool_name, 'max_bytes', '0']
+    try:
+        check_call(cmd)
+    except CalledProcessError:
+        raise
+
+
+def remove_erasure_profile(service, profile_name):
+    """
+    Create a new erasure code profile if one does not already exist for it.  Updates
+    the profile if it exists. Please see http://docs.ceph.com/docs/master/rados/operations/erasure-code-profile/
+    for more details
+    :param service: six.string_types. The Ceph user name to run the command under
+    :param profile_name: six.string_types
+    :return: None.  Can raise CalledProcessError
+    """
+    cmd = ['ceph', '--id', service, 'osd', 'erasure-code-profile', 'rm', profile_name]
     try:
         check_call(cmd)
     except CalledProcessError:
@@ -596,7 +614,7 @@ def configure(service, key, auth, use_syslog):
                                          keyring=_keyring_path(service),
                                          mon_hosts=",".join(map(str, hosts)),
                                          use_syslog=use_syslog))
-    modprobe('rbd')
+        # modprobe('rbd')
 
 
 def image_mapped(name):

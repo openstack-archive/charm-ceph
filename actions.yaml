@@ -26,7 +26,6 @@ create-pool:
         before calling create-pool
   required: [name, pool-type]
   additionalProperties: false
-     
 create-erasure-profile:
   description: Create a new erasure code profile to use on a pool.
   params:
@@ -36,41 +35,39 @@ create-erasure-profile:
     failure-domain:
       type: string
       default: host
+      enum: [chassis, datacenter, host, osd, pdu, pod, rack, region, room, root, row]
       description: |
         The failure-domain=host will create a CRUSH ruleset that ensures no two chunks are stored in the same host.
-        Other valid options include
-        ['chassis', 'datacenter', 'host', 'osd', 'pdu', 'pod', 'rack', 'region', 'room', 'root', 'row']
     plugin:
       type: string
       default: jerasure
       description: |
         The erasure plugin to use for this profile.
         See http://docs.ceph.com/docs/master/rados/operations/erasure-code-profile/ for more details
-    data_chunks:
+    data-chunks:
       type: integer
       default: 3
       description: |
         The number of data chunks, i.e. the number of chunks in which the original object is divided. For instance
         if K = 2 a 10KB object will be divided into K objects of 5KB each.
-    coding_chunks:
+    coding-chunks:
       type: integer
       default: 2
       description: |
         The number of coding chunks, i.e. the number of additional chunks computed by the encoding functions.
         If there are 2 coding chunks, it means 2 OSDs can be out without losing data.
-    locality_chunks:
+    locality-chunks:
       type: integer
       description: |
         Group the coding and data chunks into sets of size locality. For instance, for k=4 and m=2, when locality=3
         two groups of three are created. Each set can be recovered without reading chunks from another set.
-    durability_estimator:
+    durability-estimator:
       type: integer
       description: |
         The number of parity chunks each of which includes each data chunk in its calculation range. The number is used
         as a durability estimator. For instance, if c=2, 2 OSDs can be down without losing data.
-  required: [name, data_chunks, coding_chunks]
+  required: [name, data-chunks, coding-chunks]
   additionalProperties: false
-
 get-erasure-profile:
   description: Display an erasure code profile.
   params:
@@ -79,7 +76,6 @@ get-erasure-profile:
       description: The name of the profile
   required: [name]
   additionalProperties: false
-
 delete-erasure-profile:
   description: Deletes an erasure code profile.
   params:
@@ -88,15 +84,12 @@ delete-erasure-profile:
       description: The name of the profile
   required: [name]
   additionalProperties: false
-  
 list-erasure-profiles:
   description: List the names of all erasure code profiles
   additionalProperties: false
-
 list-pools:
   description: List your cluster’s pools
   additionalProperties: false
-
 set-pool-max-bytes:
   description: Set pool quotas for the maximum number of bytes.
   params:
@@ -108,7 +101,6 @@ set-pool-max-bytes:
       description: The name of the pool
   required: [pool-name, max]
   additionalProperties: false
-
 delete-pool:
   description: Deletes the named pool
   params:
@@ -117,7 +109,6 @@ delete-pool:
       description: The name of the pool
   required: [pool-name]
   additionalProperties: false
-
 rename-pool:
   description: Rename a pool
   params:
@@ -129,11 +120,9 @@ rename-pool:
       description: The new name of the pool
   required: [pool-name, new-name]
   additionalProperties: false
-
 pool-statistics:
   description: Show a pool’s utilization statistics
   additionalProperties: false
-
 snapshot-pool:
   description: Snapshot a pool
   params:
@@ -145,7 +134,6 @@ snapshot-pool:
       description: The name of the snapshot
   required: [snapshot-name, pool-name]
   additionalProperties: false
-
 remove-pool-snapshot:
   description: Remove a pool snapshot
   params:
@@ -157,7 +145,6 @@ remove-pool-snapshot:
       description: The name of the snapshot
   required: [snapshot-name, pool-name]
   additionalProperties: false
-
 pool-set:
   description: Set a value for the pool
   params:
@@ -172,7 +159,6 @@ pool-set:
       description: The value to set
   required: [key, value, pool-name]
   additionalProperties: false
-
 pool-get:
   description: Get a value for the pool
   params:

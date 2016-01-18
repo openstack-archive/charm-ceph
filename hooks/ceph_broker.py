@@ -3,6 +3,7 @@
 # Copyright 2015 Canonical Ltd.
 #
 import json
+import six
 
 from charmhelpers.contrib.storage.linux.ceph import validator, \
     erasure_profile_exists, ErasurePool, set_pool_quota, \
@@ -94,15 +95,6 @@ def process_requests(reqs):
                 resp['request-id'] = request_id
 
             return resp
-        elif version == 2:
-            # Version with advanced pool support
-            log('Processing request {}'.format(request_id), level=DEBUG)
-            resp = process_requests_v2(reqs['ops'])
-            if request_id:
-                resp['request-id'] = request_id
-
-            return resp
-
     except Exception as exc:
         log(str(exc), level=ERROR)
         msg = ("Unexpected error occurred while processing requests: %s" %
@@ -116,69 +108,6 @@ def process_requests(reqs):
         resp['request-id'] = request_id
 
     return resp
-
-
-def process_requests_v2(requests):
-    """Process v2 requests.
-
-    Takes a list of requests (dicts) and processes each one. If an error is
-    found, processing stops and the client is notified in the response.
-
-    Returns a response dict containing the exit code (non-zero if any
-    operation failed along with an explanation).
-    """
-    log("Processing %s ceph broker requests" % len(requests), level=INFO)
-    for req in requests:
-        op = req.get('op')
-        log("Processing op='%s'" % op, level=DEBUG)
-        # Use admin client since we do not have other client key locations
-        # setup to use them for these operations.
-        svc = 'admin'
-        if op == "create-pool":
-            # TODO: Default to replicated
-            pool_type = req.get('pool-type')  # "replicated" | "erasure"
-            if pool_type == 'erasure':
-                handle_erasure_pool(request=req, service=svc)
-            elif pool_type == 'replicated':
-                handle_replicated_pool(request=req, service=svc)
-        elif op == "create-cache-tier":
-            handle_create_cache_tier(request=req, service=svc)
-        elif op == "remove-cache-tier":
-            handle_remove_cache_tier(request=req, service=svc)
-
-        elif op == "create-erasure-profile":
-            handle_create_erasure_profile(request=req, service=svc)
-
-        elif op == "delete-pool":
-            pool = req.get('name')
-            delete_pool(service=svc, name=pool)
-
-        elif op == "rename-pool":
-            old_name = req.get('name')
-            new_name = req.get('new-name')
-            rename_pool(service=svc, old_name=old_name, new_name=new_name)
-
-        elif op == "snapshot-pool":
-            pool = req.get('name')
-            snapshot_name = req.get('snapshot-name')
-            snapshot_pool(service=svc, pool_name=pool,
-                          snapshot_name=snapshot_name)
-
-        elif op == "remove-pool-snapshot":
-            pool = req.get('name')
-            snapshot_name = req.get('snapshot-name')
-            remove_pool_snapshot(service=svc, pool_name=pool,
-                                 snapshot_name=snapshot_name)
-
-        elif op == "set-pool-value":
-            handle_set_pool_value(request=req, service=svc)
-
-        else:
-            msg = "Unknown operation '%s'" % op
-            log(msg, level=ERROR)
-            return {'exit-code': 1, 'stderr': msg}
-
-    return {'exit-code': 0}
 
 
 def handle_create_erasure_profile(request, service):
@@ -332,24 +261,39 @@ def process_requests_v1(reqs):
         # setup to use them for these operations.
         svc = 'admin'
         if op == "create-pool":
-            params = {'pool': req.get('name'),
-                      'replicas': req.get('replicas')}
-            if not all(params.iteritems()):
-                msg = ("Missing parameter(s): %s" %
-                       (' '.join([k for k in params.iterkeys()
-                                  if not params[k]])))
-                log(msg, level=ERROR)
-                return {'exit-code': 1, 'stderr': msg}
+            pool_name = req.get('name')
+            pool_type = req.get('pool-type')  # "replicated" | "erasure"
 
-            pool = params['pool']
-            replicas = params['replicas']
-            if not pool_exists(service=svc, name=pool):
-                log("Creating pool '%s' (replicas=%s)" % (pool, replicas),
-                    level=INFO)
-                create_pool(service=svc, name=pool, replicas=replicas)
+            # Default to replicated if pool_type isn't given
+            if pool_type == 'erasure':
+                handle_erasure_pool(request=req, service=svc)
             else:
-                log("Pool '%s' already exists - skipping create" % pool,
-                    level=DEBUG)
+                handle_replicated_pool(request=req, service=svc)
+        elif op == "create-cache-tier":
+            handle_create_cache_tier(request=req, service=svc)
+        elif op == "remove-cache-tier":
+            handle_remove_cache_tier(request=req, service=svc)
+        elif op == "create-erasure-profile":
+            handle_create_erasure_profile(request=req, service=svc)
+        elif op == "delete-pool":
+            pool = req.get('name')
+            delete_pool(service=svc, name=pool)
+        elif op == "rename-pool":
+            old_name = req.get('name')
+            new_name = req.get('new-name')
+            rename_pool(service=svc, old_name=old_name, new_name=new_name)
+        elif op == "snapshot-pool":
+            pool = req.get('name')
+            snapshot_name = req.get('snapshot-name')
+            snapshot_pool(service=svc, pool_name=pool,
+                          snapshot_name=snapshot_name)
+        elif op == "remove-pool-snapshot":
+            pool = req.get('name')
+            snapshot_name = req.get('snapshot-name')
+            remove_pool_snapshot(service=svc, pool_name=pool,
+                                 snapshot_name=snapshot_name)
+        elif op == "set-pool-value":
+            handle_set_pool_value(request=req, service=svc)
         else:
             msg = "Unknown operation '%s'" % op
             log(msg, level=ERROR)

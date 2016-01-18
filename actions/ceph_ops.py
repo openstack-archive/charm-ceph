@@ -1,10 +1,11 @@
 __author__ = 'chris'
 from subprocess import CalledProcessError, check_output
 import sys
+
 sys.path.append('hooks')
 
 import rados
-from charmhelpers.core.hookenv import log, Hooks, action_get
+from charmhelpers.core.hookenv import log, action_get, action_fail
 from charmhelpers.contrib.storage.linux.ceph import pool_set, set_pool_quota, snapshot_pool, remove_pool_snapshot
 
 # Connect to Ceph via Librados and return a connection
@@ -36,8 +37,8 @@ def list_pools():
             rados.ObjectNotFound,
             rados.NoData,
             rados.NoSpace,
-            rados.PermissionError):
-        sys.exit(-1)
+            rados.PermissionError) as e:
+        action_fail(e.message)
 
 
 def pool_get():
@@ -47,7 +48,7 @@ def pool_get():
         value = check_output(['ceph', 'osd', 'pool', 'get', pool_name, key])
         return value
     except CalledProcessError as e:
-        sys.exit(e.returncode)
+        action_fail(e.message)
 
 
 def set_pool():
@@ -71,20 +72,14 @@ def pool_stats():
             rados.ObjectNotFound,
             rados.NoData,
             rados.NoSpace,
-            rados.PermissionError):
-        sys.exit(-1)
+            rados.PermissionError) as e:
+        action_fail(e.message)
 
 
 def delete_pool_snapshot():
     pool_name = action_get("pool-name")
     snapshot_name = action_get("snapshot-name")
     remove_pool_snapshot(service='ceph', pool_name=pool_name, snapshot_name=snapshot_name)
-
-
-def rename_pool():
-    old_name = action_get("name")
-    new_name = action_get("new-name")
-    rename_pool(service='ceph', old_name=old_name, new_name=new_name)
 
 
 # Note only one or the other can be set
@@ -94,7 +89,7 @@ def set_pool_max_bytes():
     set_pool_quota(service='ceph', pool_name=pool_name, max_bytes=max_bytes)
 
 
-def snapshot_pool():
+def snapshot_ceph_pool():
     pool_name = action_get("pool-name")
     snapshot_name = action_get("snapshot-name")
     snapshot_pool(service='ceph', pool_name=pool_name, snapshot_name=snapshot_name)

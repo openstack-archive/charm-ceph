@@ -19,34 +19,34 @@ def make_erasure_profile():
     # shec requires k+m+c
 
     if plugin == "jerasure":
-        k = action_get("data_chunks")
-        m = action_get("coding_chunks")
+        k = action_get("data-chunks")
+        m = action_get("coding-chunks")
         try:
             create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
                                    coding_chunks=m, failure_domain=failure_domain)
         except CalledProcessError as e:
             log(e)
     elif plugin == "isa":
-        k = action_get("data_chunks")
-        m = action_get("coding_chunks")
+        k = action_get("data-chunks")
+        m = action_get("coding-chunks")
         try:
             create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
                                    coding_chunks=m, failure_domain=failure_domain)
         except CalledProcessError as e:
             log(e)
     elif plugin == "local":
-        k = action_get("data_chunks")
-        m = action_get("coding_chunks")
-        l = action_get("locality_chunks")
+        k = action_get("data-chunks")
+        m = action_get("coding-chunks")
+        l = action_get("locality-chunks")
         try:
             create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
                                    coding_chunks=m, locality=l, failure_domain=failure_domain)
         except CalledProcessError as e:
             log(e)
     elif plugin == "shec":
-        k = action_get("data_chunks")
-        m = action_get("coding_chunks")
-        c = action_get("durability_estimator")
+        k = action_get("data-chunks")
+        m = action_get("coding-chunks")
+        c = action_get("durability-estimator")
         try:
             create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
                                    coding_chunks=m, durability_estimator=c, failure_domain=failure_domain)

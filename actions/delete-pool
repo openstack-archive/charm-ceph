@@ -4,9 +4,8 @@ import sys
 sys.path.append('hooks')
 
 import rados
-import sys
 from ceph_ops import connect
-from charmhelpers.core.hookenv import action_get, log
+from charmhelpers.core.hookenv import action_get, log, action_fail
 
 
 def remove_pool():
@@ -22,7 +21,7 @@ def remove_pool():
             rados.NoSpace,
             rados.PermissionError) as e:
         log(e)
-        sys.exit(-1)
+        action_fail(e)
 
 
 if __name__ == '__main__':

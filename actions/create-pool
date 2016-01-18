@@ -3,7 +3,7 @@ import sys
 
 sys.path.append('hooks')
 from subprocess import CalledProcessError
-from charmhelpers.core.hookenv import action_get, log
+from charmhelpers.core.hookenv import action_get, log, action_fail
 from charmhelpers.contrib.storage.linux.ceph import ErasurePool, ReplicatedPool
 
 
@@ -23,6 +23,7 @@ def create_pool():
             erasure_pool.create()
         else:
             log("Unknown pool type of {}. Only erasure or replicated is allowed".format(pool_type))
+            action_fail("Unknown pool type of {}. Only erasure or replicated is allowed".format(pool_type))
             sys.exit(-1)
     except CalledProcessError as e:
         sys.exit(e.returncode)

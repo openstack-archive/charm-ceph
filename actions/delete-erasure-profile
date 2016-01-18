@@ -4,15 +4,14 @@ import sys
 
 sys.path.append('hooks')
 
-from charmhelpers.contrib.storage.linux.ceph import create_erasure_profile
+from charmhelpers.contrib.storage.linux.ceph import remove_erasure_profile
 from charmhelpers.core.hookenv import action_get, log
 
 
 def delete_erasure_profile():
     name = action_get("name")
 
-    delete_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
-                           coding_chunks=m, durability_estimator=c, failure_domain=failure_domain)
+    remove_erasure_profile(service='admin', profile_name=name)
 
 
 if __name__ == '__main__':
