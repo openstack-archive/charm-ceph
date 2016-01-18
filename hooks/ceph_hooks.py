@@ -99,6 +99,7 @@ def emit_cephconf():
         'use_syslog': str(config('use-syslog')).lower(),
         'ceph_public_network': config('ceph-public-network'),
         'ceph_cluster_network': config('ceph-cluster-network'),
+        'loglevel': config('loglevel'),
     }
 
     if config('prefer-ipv6'):
