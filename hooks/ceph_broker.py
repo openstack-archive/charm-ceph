@@ -3,7 +3,6 @@
 # Copyright 2015 Canonical Ltd.
 #
 import json
-import six
 
 from charmhelpers.contrib.storage.linux.ceph import validator, \
     erasure_profile_exists, ErasurePool, set_pool_quota, \
@@ -18,7 +17,6 @@ from charmhelpers.core.hookenv import (
 )
 
 from charmhelpers.contrib.storage.linux.ceph import (
-    create_pool,
     pool_exists,
     delete_pool)
 
@@ -261,7 +259,6 @@ def process_requests_v1(reqs):
         # setup to use them for these operations.
         svc = 'admin'
         if op == "create-pool":
-            pool_name = req.get('name')
             pool_type = req.get('pool-type')  # "replicated" | "erasure"
 
             # Default to replicated if pool_type isn't given

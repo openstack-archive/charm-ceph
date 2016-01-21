@@ -6,7 +6,9 @@ sys.path.append('hooks')
 
 import rados
 from charmhelpers.core.hookenv import log, action_get, action_fail
-from charmhelpers.contrib.storage.linux.ceph import pool_set, set_pool_quota, snapshot_pool, remove_pool_snapshot
+from charmhelpers.contrib.storage.linux.ceph import pool_set, \
+    set_pool_quota, snapshot_pool, remove_pool_snapshot
+
 
 # Connect to Ceph via Librados and return a connection
 def connect():
@@ -79,17 +81,23 @@ def pool_stats():
 def delete_pool_snapshot():
     pool_name = action_get("pool-name")
     snapshot_name = action_get("snapshot-name")
-    remove_pool_snapshot(service='ceph', pool_name=pool_name, snapshot_name=snapshot_name)
+    remove_pool_snapshot(service='ceph',
+                         pool_name=pool_name,
+                         snapshot_name=snapshot_name)
 
 
 # Note only one or the other can be set
 def set_pool_max_bytes():
     pool_name = action_get("pool-name")
     max_bytes = action_get("max")
-    set_pool_quota(service='ceph', pool_name=pool_name, max_bytes=max_bytes)
+    set_pool_quota(service='ceph',
+                   pool_name=pool_name,
+                   max_bytes=max_bytes)
 
 
 def snapshot_ceph_pool():
     pool_name = action_get("pool-name")
     snapshot_name = action_get("snapshot-name")
-    snapshot_pool(service='ceph', pool_name=pool_name, snapshot_name=snapshot_name)
+    snapshot_pool(service='ceph',
+                  pool_name=pool_name,
+                  snapshot_name=snapshot_name)

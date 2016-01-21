@@ -60,13 +60,17 @@ class CephBrokerTestCase(unittest.TestCase):
     @mock.patch('ceph_broker.create_pool')
     @mock.patch('ceph_broker.pool_exists')
     @mock.patch('ceph_broker.log')
-    def test_process_requests_create_erasure_pool(self, mock_log, mock_pool_exists,
+    def test_process_requests_create_erasure_pool(self, mock_log,
+                                                  mock_pool_exists,
                                                   mock_create_pool):
         mock_pool_exists.return_value = False
         reqs = json.dumps({'api-version': 1,
-                           'ops': [{'op': 'create-pool', 'name':
-                               'foo', 'erasure-type': 'jerasure',
-                                    'failure-domain': 'host', 'k': 3, 'm': 2}]})
+                           'ops': [{'op': 'create-pool',
+                                    'name': 'foo',
+                                    'erasure-type': 'jerasure',
+                                    'failure-domain': 'host',
+                                    'k': 3,
+                                    'm': 2}]})
         rc = ceph_broker.process_requests(reqs)
         mock_pool_exists.assert_called_with(service='admin', name='foo')
         mock_create_pool.assert_called_with(service='admin', name='foo')
