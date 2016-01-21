@@ -15,7 +15,7 @@ class TestCephOps(unittest.TestCase):
     """
 
     @mock.patch('ceph_broker.log')
-    @mock.patch('ceph_broker.create_erasure_profile')
+    @mock.patch('hooks.ceph_broker.create_erasure_profile')
     def test_create_erasure_profile(self, mock_create_erasure, mock_log):
         req = json.dumps({'api-version': 1,
                           'ops': [{
@@ -29,16 +29,16 @@ class TestCephOps(unittest.TestCase):
         rc = ceph_broker.process_requests(req)
         mock_create_erasure.assert_called_with(service='admin',
                                                profile_name='foo',
-                                               k=3,
-                                               m=2,
-                                               l=None,
+                                               coding_chunks=2,
+                                               data_chunks=3,
+                                               locality=None,
                                                failure_domain='rack',
                                                erasure_plugin_name='jerasure')
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
     @mock.patch('ceph_broker.log')
-    @mock.patch('ceph_broker.pool_exists')
-    @mock.patch('ceph_broker.ReplicatedPool.create')
+    @mock.patch('hooks.ceph_broker.pool_exists')
+    @mock.patch('hooks.ceph_broker.ReplicatedPool.create')
     def test_process_requests_create_replicated_pool(self,
                                                      mock_replicated_pool,
                                                      mock_pool_exists,
@@ -57,9 +57,23 @@ class TestCephOps(unittest.TestCase):
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
     @mock.patch('ceph_broker.log')
-    @mock.patch('ceph_broker.pool_exists')
-    @mock.patch('ceph_broker.ErasurePool.create')
-    @mock.patch('ceph_broker.erasure_profile_exists')
+    @mock.patch('hooks.ceph_broker.delete_pool')
+    def test_process_requests_delete_pool(self,
+                                          mock_delete_pool,
+                                          mock_log):
+        reqs = json.dumps({'api-version': 1,
+                           'ops': [{
+                               'op': 'delete-pool',
+                               'name': 'foo',
+                           }]})
+        rc = ceph_broker.process_requests(reqs)
+        mock_delete_pool.assert_called_with(service='admin', name='foo')
+        self.assertEqual(json.loads(rc), {'exit-code': 0})
+
+    @mock.patch('ceph_broker.log')
+    @mock.patch('hooks.ceph_broker.pool_exists')
+    @mock.patch('hooks.ceph_broker.ErasurePool.create')
+    @mock.patch('hooks.ceph_broker.erasure_profile_exists')
     def test_process_requests_create_erasure_pool(self, mock_profile_exists,
                                                   mock_erasure_pool,
                                                   mock_pool_exists,
@@ -79,8 +93,8 @@ class TestCephOps(unittest.TestCase):
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
     @mock.patch('ceph_broker.log')
-    @mock.patch('ceph_broker.pool_exists')
-    @mock.patch('ceph_broker.Pool.add_cache_tier')
+    @mock.patch('hooks.ceph_broker.pool_exists')
+    @mock.patch('hooks.ceph_broker.Pool.add_cache_tier')
     def test_process_requests_create_cache_tier(self, mock_pool,
                                                 mock_pool_exists, mock_log):
         mock_pool_exists.return_value = True
@@ -100,7 +114,24 @@ class TestCephOps(unittest.TestCase):
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
     @mock.patch('ceph_broker.log')
-    @mock.patch('ceph_broker.snapshot_pool')
+    @mock.patch('hooks.ceph_broker.pool_exists')
+    @mock.patch('hooks.ceph_broker.Pool.remove_cache_tier')
+    def test_process_requests_remove_cache_tier(self, mock_pool,
+                                                mock_pool_exists, mock_log):
+        mock_pool_exists.return_value = True
+        reqs = json.dumps({'api-version': 1,
+                           'ops': [{
+                               'op': 'remove-cache-tier',
+                               'hot-pool': 'foo-ssd',
+                           }]})
+        rc = ceph_broker.process_requests(reqs)
+        mock_pool_exists.assert_any_call(service='admin', name='foo-ssd')
+
+        mock_pool.assert_called_with(cache_pool='foo-ssd')
+        self.assertEqual(json.loads(rc), {'exit-code': 0})
+
+    @mock.patch('ceph_broker.log')
+    @mock.patch('hooks.ceph_broker.snapshot_pool')
     def test_snapshot_pool(self, mock_snapshot_pool, mock_log):
         reqs = json.dumps({'api-version': 1,
                            'ops': [{
@@ -116,7 +147,22 @@ class TestCephOps(unittest.TestCase):
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
     @mock.patch('ceph_broker.log')
-    @mock.patch('ceph_broker.remove_pool_snapshot')
+    @mock.patch('hooks.ceph_broker.rename_pool')
+    def test_rename_pool(self, mock_rename_pool, mock_log):
+        reqs = json.dumps({'api-version': 1,
+                           'ops': [{
+                               'op': 'rename-pool',
+                               'name': 'foo',
+                               'new-name': 'foo2',
+                           }]})
+        rc = ceph_broker.process_requests(reqs)
+        mock_rename_pool.assert_called_with(service='admin',
+                                            old_name='foo',
+                                            new_name='foo2')
+        self.assertEqual(json.loads(rc), {'exit-code': 0})
+
+    @mock.patch('ceph_broker.log')
+    @mock.patch('hooks.ceph_broker.remove_pool_snapshot')
     def test_remove_pool_snapshot(self, mock_snapshot_pool, mock_broker):
         reqs = json.dumps({'api-version': 1,
                            'ops': [{
@@ -131,7 +177,7 @@ class TestCephOps(unittest.TestCase):
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
     @mock.patch('ceph_broker.log')
-    @mock.patch('ceph_broker.pool_set')
+    @mock.patch('hooks.ceph_broker.pool_set')
     def test_set_pool_value(self, mock_set_pool, mock_broker):
         reqs = json.dumps({'api-version': 1,
                            'ops': [{
@@ -162,38 +208,8 @@ class TestCephOps(unittest.TestCase):
 
     '''
     @mock.patch('ceph_broker.log')
-    def test_set_invalid_pool_key(self, mock_broker):
-        reqs = json.dumps({'api-version': 1,
-                           'ops': [{
-                               'op': 'set-pool-value',
-                               'name': 'foo',
-                               'key': 'foo',
-                               'value': 'abc',
-                           }]})
-        rc = ceph_broker.process_requests(reqs)
-        self.assertEqual(json.loads(rc)['exit-code'], 1)
-
-    @mock.patch('ceph_broker.log')
-    def test_list_pools(self, mock_broker):
-        self.fail()
-
-    @mock.patch('ceph_broker.log')
-    def test_pool_get(self, mock_broker):
-        self.fail()
-
-    @mock.patch('ceph_broker.log')
-    def test_pool_stats(self, mock_broker):
-        self.fail()
-
-    @mock.patch('ceph_broker.log')
-    def test_rename_pool(self, mock_broker):
-        self.fail()
-
-    @mock.patch('ceph_broker.log')
     def test_set_pool_max_bytes(self, mock_broker):
         self.fail()
-
-
     '''
 
 

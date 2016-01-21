@@ -167,6 +167,7 @@ def handle_erasure_pool(request, service):
 def handle_replicated_pool(request, service):
     pool_name = request.get('name')
     replicas = request.get('replicas')
+    quota = request.get('max-bytes')
 
     # Check for missing params
     if pool_name is None or replicas is None:
@@ -182,6 +183,10 @@ def handle_replicated_pool(request, service):
     else:
         log("Pool '%s' already exists - skipping create" % pool,
             level=DEBUG)
+
+    # Set a quota if requested
+    if quota is not None:
+        set_pool_quota(service=service, pool_name=pool_name, max_bytes=quota)
 
 
 def handle_create_cache_tier(request, service):
