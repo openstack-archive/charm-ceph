@@ -138,7 +138,7 @@ def handle_erasure_pool(request, service):
         log(msg, level=ERROR)
         return {'exit-code': 1, 'stderr': msg}
 
-    # TODO: Default to 6/3 erasure coding. I believe this requires min 9 osds
+    # TODO: Default to 3/2 erasure coding. I believe this requires min 5 osds
     if not erasure_profile_exists(service=service, name=erasure_profile):
         # TODO: Fail and tell them to create the profile or default
         msg = "erasure-profile {} does not exist.  Please create it with: " \
