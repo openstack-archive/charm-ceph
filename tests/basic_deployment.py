@@ -449,18 +449,15 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         assert u.wait_on_action(action_id), "Pause action failed."
 
         output, code = sentry_unit.run(cmd)
-        u.log.debug(output)
-        import re
-        if re.search('flags ((noout,nodown)|(nodown,noout))',
-                     output) is None:
+        if 'nodown' not in output or 'noout' not in output:
             amulet.raise_status(amulet.FAIL, msg="Missing noout,nodown")
 
         u.log.debug("Testing resume")
         action_id = u.run_action(sentry_unit, 'resume')
         assert u.wait_on_action(action_id), "Resume action failed."
+
         output, code = sentry_unit.run(cmd)
-        if re.search('flags ((noout,nodown)|(nodown,noout))',
-                     output) is not None:
+        if 'nodown' in output or 'noout' in output:
             amulet.raise_status(amulet.FAIL, msg="Still has noout,nodown")
 
     def test_410_ceph_cinder_vol_create(self):
