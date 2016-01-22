@@ -444,7 +444,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
 
         sentry_unit = self.ceph0_sentry
         # action_id = self.action_do(sentry_unit, 'pause')
-        action_id = u.run_action(sentry, 'pause')
+        action_id = u.run_action(sentry_unit, 'pause')
         # self.action_fetch(action_id)
         assert u.wait_on_action(action_id), "Pause action failed."
 
@@ -454,7 +454,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
             amulet.raise_status(amulet.FAIL, msg="Missing noout,nodown")
 
         u.log.debug("Testing resume")
-        action_id = u.run_action(sentry, 'resume')
+        action_id = u.run_action(sentry_unit, 'resume')
         assert u.wait_on_action(action_id), "Resume action failed."
         output, code = sentry_unit.run(cmd)
         if re.match('flags nodown,noout', output) is not None:
