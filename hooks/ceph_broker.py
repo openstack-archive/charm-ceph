@@ -7,7 +7,7 @@ import json
 from charmhelpers.contrib.storage.linux.ceph import validator, \
     erasure_profile_exists, ErasurePool, set_pool_quota, \
     pool_set, snapshot_pool, remove_pool_snapshot, create_erasure_profile, \
-    ReplicatedPool, rename_pool, Pool
+    ReplicatedPool, rename_pool, Pool, get_osds, pool_exists, delete_pool
 
 from charmhelpers.core.hookenv import (
     log,
@@ -15,10 +15,6 @@ from charmhelpers.core.hookenv import (
     INFO,
     ERROR,
 )
-
-from charmhelpers.contrib.storage.linux.ceph import (
-    pool_exists,
-    delete_pool)
 
 # This comes from http://docs.ceph.com/docs/master/rados/operations/pools/
 # This should do a decent job of preventing people from passing in bad values.
@@ -169,13 +165,21 @@ def handle_replicated_pool(request, service):
     replicas = request.get('replicas')
     quota = request.get('max-bytes')
 
+    # Optional params
+    pg_num = request.get('pg_num')
+    if pg_num:
+        # Cap pg_num to max allowed just in case.
+        osds = get_osds(service)
+        if osds:
+            pg_num = min(pg_num, (len(osds) * 100 // replicas))
+
     # Check for missing params
     if pool_name is None or replicas is None:
         msg = "Missing parameter. name and replicas are required"
         log(msg, level=ERROR)
         return {'exit-code': 1, 'stderr': msg}
 
-    pool = ReplicatedPool(service=service, name=pool_name, replicas=replicas)
+    pool = ReplicatedPool(service=service, name=pool_name, replicas=replicas,pg_num=pg_num)
     if not pool_exists(service=service, name=pool_name):
         log("Creating pool '%s' (replicas=%s)" % (pool, replicas),
             level=INFO)

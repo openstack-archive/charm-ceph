@@ -120,7 +120,6 @@ class PoolCreationError(Exception):
     """
     A custom error to inform the caller that a pool creation failed.  Provides an error message
     """
-
     def __init__(self, message):
         super(PoolCreationError, self).__init__(message)
 
@@ -130,7 +129,6 @@ class Pool(object):
     An object oriented approach to Ceph pool creation. This base class is inherited by ReplicatedPool and ErasurePool.
     Do not call create() on this base class as it will not do anything.  Instantiate a child class and call create().
     """
-
     def __init__(self, service, name):
         self.service = service
         self.name = name
@@ -196,22 +194,25 @@ class Pool(object):
         elif 10 < osds < 50:
             return 4096
         else:
-            estimate = (len(osds) * 100) / pool_size
+            estimate = (osds * 100) / pool_size
             # Return the next nearest power of 2
             index = bisect.bisect_right(powers_of_two, estimate)
             return powers_of_two[index]
 
 
 class ReplicatedPool(Pool):
-    def __init__(self, service, name, replicas=2):
+    def __init__(self, service, name, pg_num=None, replicas=2):
         super(ReplicatedPool, self).__init__(service=service, name=name)
         self.replicas = replicas
+        if pg_num is None:
+            self.pg_num = self.get_pgs(self.replicas)
+        else:
+            self.pg_num = pg_num
 
     def create(self):
         if not pool_exists(self.service, self.name):
             # Create it
-            pgs = self.get_pgs(self.replicas)
-            cmd = ['ceph', '--id', self.service, 'osd', 'pool', 'create', self.name, str(pgs)]
+            cmd = ['ceph', '--id', self.service, 'osd', 'pool', 'create', self.name, str(self.pg_num)]
             try:
                 check_call(cmd)
             except CalledProcessError:

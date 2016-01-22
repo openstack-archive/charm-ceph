@@ -1,4 +1,8 @@
 options:
+  loglevel:
+    default: 1
+    type: int
+    description: Mon and OSD debug level. Max is 20.
   fsid:
     type: string
     default:

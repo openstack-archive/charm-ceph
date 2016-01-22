@@ -99,6 +99,7 @@ def emit_cephconf():
         'use_syslog': str(config('use-syslog')).lower(),
         'ceph_public_network': config('ceph-public-network'),
         'ceph_cluster_network': config('ceph-cluster-network'),
+        'loglevel': config('loglevel'),
     }
 
     if config('prefer-ipv6'):
@@ -111,7 +112,8 @@ def emit_cephconf():
     # Install ceph.conf as an alternative to support
     # co-existence with other charms that write this file
     charm_ceph_conf = "/var/lib/charm/{}/ceph.conf".format(service_name())
-    mkdir(os.path.dirname(charm_ceph_conf))
+    mkdir(os.path.dirname(charm_ceph_conf), owner=ceph.ceph_user(),
+          group=ceph.ceph_user())
     render('ceph.conf', charm_ceph_conf, cephcontext, perms=0o644)
     install_alternative('ceph.conf', '/etc/ceph/ceph.conf',
                         charm_ceph_conf, 100)
@@ -314,20 +316,31 @@ def osd_relation(relid=None):
         log('mon cluster not in quorum - deferring fsid provision')
 
 
+@hooks.hook('radosgw-relation-changed')
 @hooks.hook('radosgw-relation-joined')
 def radosgw_relation(relid=None):
     # Install radosgw for admin tools
     apt_install(packages=filter_installed_packages(['radosgw']))
+
+    """Process broker request(s)."""
     if ceph.is_quorum():
-        log('mon cluster in quorum - providing radosgw with keys')
-        data = {
-            'fsid': config('fsid'),
-            'radosgw_key': ceph.get_radosgw_key(),
-            'auth': config('auth-supported'),
-            'ceph-public-address': get_public_addr(),
-        }
-        relation_set(relation_id=relid,
-                     relation_settings=data)
+        settings = relation_get(rid=relid)
+        if 'broker_req' in settings:
+            if not ceph.is_leader():
+                log("Not leader - ignoring broker request", level=DEBUG)
+            else:
+                rsp = process_requests(settings['broker_req'])
+                unit_id = remote_unit().replace('/', '-')
+                unit_response_key = 'broker-rsp-' + unit_id
+                log('mon cluster in quorum - providing radosgw with keys')
+                data = {
+                    'fsid': config('fsid'),
+                    'radosgw_key': ceph.get_radosgw_key(),
+                    'auth': config('auth-supported'),
+                    'ceph-public-address': get_public_addr(),
+                    unit_response_key: rsp,
+                }
+                relation_set(relation_id=relid, relation_settings=data)
     else:
         log('mon cluster not in quorum - deferring key provision')
 
