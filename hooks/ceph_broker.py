@@ -179,7 +179,10 @@ def handle_replicated_pool(request, service):
         log(msg, level=ERROR)
         return {'exit-code': 1, 'stderr': msg}
 
-    pool = ReplicatedPool(service=service, name=pool_name, replicas=replicas,pg_num=pg_num)
+    pool = ReplicatedPool(service=service,
+                          name=pool_name,
+                          replicas=replicas,
+                          pg_num=pg_num)
     if not pool_exists(service=service, name=pool_name):
         log("Creating pool '%s' (replicas=%s)" % (pool, replicas),
             level=INFO)
