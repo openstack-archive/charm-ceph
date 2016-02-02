@@ -231,10 +231,9 @@ def reformat_osd():
 
 def get_devices():
     if config('osd-devices'):
-        devices =  [
+        devices = [
             os.path.realpath(path)
             for path in config('osd-devices').split(' ')]
-
     else:
         devices = []
     # List storage instances for the 'osd-devices'

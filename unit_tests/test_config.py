@@ -11,7 +11,6 @@ TO_PATCH = [
 ]
 
 
-
 class GetDevicesTestCase(test_utils.CharmTestCase):
 
     def setUp(self):
