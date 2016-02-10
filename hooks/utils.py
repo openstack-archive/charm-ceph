@@ -23,8 +23,8 @@ from charmhelpers.core.host import (
     lsb_release
 )
 
-from charmhelpers.contrib.network import ip
 from charmhelpers.contrib.network.ip import (
+    get_address_in_network,
     get_ipv6_addr
 )
 
@@ -71,10 +71,27 @@ def get_host_ip(hostname=None):
             return answers[0].address
 
 
-@cached
-def get_public_addr():
-    return ip.get_address_in_network(config('ceph-public-network'),
-                                     fallback=get_host_ip())
+def get_networks(config_opt='ceph-public-network'):
+    networks = config(config_opt)
+    if networks:
+        networks = networks.split()
+        return [n for n in networks if get_address_in_network(n)]
+
+    return []
+
+
+def get_network_addrs(config_opt='ceph-public-network', fallback=None):
+    addrs = []
+    networks = config(config_opt)
+    if networks:
+        networks = networks.split()
+        addrs = [get_address_in_network(n) for n in networks]
+        addrs = [a for a in addrs if a]
+
+    if not addrs and fallback:
+        addrs = [fallback]
+
+    return addrs
 
 
 def assert_charm_supports_ipv6():
