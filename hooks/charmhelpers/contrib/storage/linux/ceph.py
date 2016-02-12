@@ -180,21 +180,21 @@ class Pool(object):
         :return: int.  The number of pgs to use.
         """
         validator(value=pool_size, valid_type=int)
-        osds = get_osds(self.service)
-        if not osds:
+        osd_list = get_osds(self.service)
+        if not osd_list:
             # NOTE(james-page): Default to 200 for older ceph versions
             # which don't support OSD query from cli
             return 200
 
         # Calculate based on Ceph best practices
-        if osds < 5:
+        if len(osd_list) < 5:
             return 128
-        elif 5 < osds < 10:
+        elif 5 < len(osd_list) < 10:
             return 512
-        elif 10 < osds < 50:
+        elif 10 < len(osd_list) < 50:
             return 4096
         else:
-            estimate = (osds * 100) / pool_size
+            estimate = (len(osd_list) * 100) / pool_size
             # Return the next nearest power of 2
             index = bisect.bisect_right(powers_of_two, estimate)
             return powers_of_two[index]
