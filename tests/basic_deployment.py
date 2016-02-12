@@ -28,7 +28,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         self._deploy()
 
         u.log.info('Waiting on extended status checks...')
-        exclude_services = ['mysql', 'nrpe']
+        exclude_services = ['mysql']
 
         # Wait for deployment ready msgs, except exclusions
         self._auto_wait_for_status(exclude_services=exclude_services)
