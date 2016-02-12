@@ -1,4 +1,4 @@
-pause:
+pause-health:
   description: Pause ceph health operations
-resume:
+resume-health:
   description: Resume ceph health operations

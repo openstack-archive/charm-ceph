@@ -443,18 +443,16 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         cmd = "ceph -s"
 
         sentry_unit = self.ceph0_sentry
-        # action_id = self.action_do(sentry_unit, 'pause')
-        action_id = u.run_action(sentry_unit, 'pause')
-        # self.action_fetch(action_id)
-        assert u.wait_on_action(action_id), "Pause action failed."
+        action_id = u.run_action(sentry_unit, 'pause-health')
+        assert u.wait_on_action(action_id), "Pause health action failed."
 
         output, code = sentry_unit.run(cmd)
         if 'nodown' not in output or 'noout' not in output:
             amulet.raise_status(amulet.FAIL, msg="Missing noout,nodown")
 
         u.log.debug("Testing resume")
-        action_id = u.run_action(sentry_unit, 'resume')
-        assert u.wait_on_action(action_id), "Resume action failed."
+        action_id = u.run_action(sentry_unit, 'resume-health')
+        assert u.wait_on_action(action_id), "Resume health action failed."
 
         output, code = sentry_unit.run(cmd)
         if 'nodown' in output or 'noout' in output:
