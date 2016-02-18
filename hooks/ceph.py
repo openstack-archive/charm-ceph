@@ -145,6 +145,7 @@ def is_leader():
 
 def wait_for_quorum():
     while not is_quorum():
+        log("Waiting for quorum to be reached")
         time.sleep(3)
 
 
