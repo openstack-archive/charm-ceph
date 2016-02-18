@@ -72,7 +72,7 @@ def get_host_ip(hostname=None):
 
 
 def get_networks(config_opt='ceph-public-network'):
-    """Get all configured public networks.
+    """Get all configured networks from provided config option.
 
     If public network(s) are provided, go through them and return those for
     which we have an address configured.
