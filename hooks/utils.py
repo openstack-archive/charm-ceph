@@ -91,8 +91,17 @@ def get_public_addr(fallback=None):
     If public network(s) are provided, go through them and return the first
     address we have configured on any of those networks.
     """
-    return get_address_in_network(config('ceph-public-network'),
-                                  fallback=fallback)
+    addrs = []
+    networks = config(config('ceph-public-network'))
+    if networks:
+        networks = networks.split()
+        addrs = [get_address_in_network(n) for n in networks]
+        addrs = [a for a in addrs if a]
+
+    if not addrs and fallback:
+        return fallback
+
+    return addrs[0]
 
 
 def assert_charm_supports_ipv6():
