@@ -19,3 +19,4 @@ packages:
     - python-novaclient
     - python-pika
     - python-swiftclient
+    - python-nose
