@@ -92,7 +92,7 @@ def get_public_addr(fallback=None):
     address we have configured on any of those networks.
     """
     addrs = []
-    networks = config(config('ceph-public-network'))
+    networks = config('ceph-public-network')
     if networks:
         networks = networks.split()
         addrs = [get_address_in_network(n) for n in networks]
