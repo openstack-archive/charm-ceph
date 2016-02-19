@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 __author__ = 'chris'
 import sys
 from subprocess import check_output, CalledProcessError
