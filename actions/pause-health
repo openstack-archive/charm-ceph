@@ -1,0 +1,6 @@
+#!/bin/bash
+
+set -eux
+
+ceph osd set nodown
+ceph osd set noout

@@ -1,3 +1,7 @@
+pause-health:
+  description: Pause ceph health operations across the entire ceph cluster
+resume-health:
+  description: Resume ceph health operations across the entire ceph cluster
 create-pool:
   description: Creates a pool
   params:
