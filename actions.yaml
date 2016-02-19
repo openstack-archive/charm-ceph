@@ -10,9 +10,10 @@ create-pool:
     pool-type:
       type: string
       default: "replicated"
+      enum: [replicated, erasure]
       description: |
-        The pool type which may either be "replicated" to recover from lost OSDs by keeping multiple copies of the
-        objects or "erasure" to get a kind of generalized RAID5 capability.
+        The pool type which may either be replicated to recover from lost OSDs by keeping multiple copies of the
+        objects or erasure to get a kind of generalized RAID5 capability.
     replicas:
       type: integer
       default: 3
@@ -24,7 +25,7 @@ create-pool:
       description: |
         The name of the erasure coding profile to use for this pool. Note this profile must exist
         before calling create-pool
-  required: [name, pool-type]
+  required: [name]
   additionalProperties: false
 create-erasure-profile:
   description: Create a new erasure code profile to use on a pool.
@@ -40,7 +41,8 @@ create-erasure-profile:
         The failure-domain=host will create a CRUSH ruleset that ensures no two chunks are stored in the same host.
     plugin:
       type: string
-      default: jerasure
+      default: "jerasure"
+      enum: [jerasure, isa, lrc, shec]
       description: |
         The erasure plugin to use for this profile.
         See http://docs.ceph.com/docs/master/rados/operations/erasure-code-profile/ for more details

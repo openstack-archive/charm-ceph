@@ -5,7 +5,7 @@ import sys
 sys.path.append('hooks')
 
 from charmhelpers.contrib.storage.linux.ceph import create_erasure_profile
-from charmhelpers.core.hookenv import action_get, log
+from charmhelpers.core.hookenv import action_get, log, action_fail
 
 
 def make_erasure_profile():
@@ -22,40 +22,67 @@ def make_erasure_profile():
         k = action_get("data-chunks")
         m = action_get("coding-chunks")
         try:
-            create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
-                                   coding_chunks=m, failure_domain=failure_domain)
+            create_erasure_profile(service='admin',
+                                   erasure_plugin_name=plugin,
+                                   profile_name=name,
+                                   data_chunks=k,
+                                   coding_chunks=m,
+                                   failure_domain=failure_domain)
         except CalledProcessError as e:
             log(e)
+            action_fail("Create erasure profile failed with "
+                        "message: {}".format(e.message))
     elif plugin == "isa":
         k = action_get("data-chunks")
         m = action_get("coding-chunks")
         try:
-            create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
-                                   coding_chunks=m, failure_domain=failure_domain)
+            create_erasure_profile(service='admin',
+                                   erasure_plugin_name=plugin,
+                                   profile_name=name,
+                                   data_chunks=k,
+                                   coding_chunks=m,
+                                   failure_domain=failure_domain)
         except CalledProcessError as e:
             log(e)
+            action_fail("Create erasure profile failed with "
+                        "message: {}".format(e.message))
     elif plugin == "local":
         k = action_get("data-chunks")
         m = action_get("coding-chunks")
         l = action_get("locality-chunks")
         try:
-            create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
-                                   coding_chunks=m, locality=l, failure_domain=failure_domain)
+            create_erasure_profile(service='admin',
+                                   erasure_plugin_name=plugin,
+                                   profile_name=name,
+                                   data_chunks=k,
+                                   coding_chunks=m,
+                                   locality=l,
+                                   failure_domain=failure_domain)
         except CalledProcessError as e:
             log(e)
+            action_fail("Create erasure profile failed with "
+                        "message: {}".format(e.message))
     elif plugin == "shec":
         k = action_get("data-chunks")
         m = action_get("coding-chunks")
         c = action_get("durability-estimator")
         try:
-            create_erasure_profile(service='admin', erasure_plugin_name=plugin, profile_name=name, data_chunks=k,
-                                   coding_chunks=m, durability_estimator=c, failure_domain=failure_domain)
+            create_erasure_profile(service='admin',
+                                   erasure_plugin_name=plugin,
+                                   profile_name=name,
+                                   data_chunks=k,
+                                   coding_chunks=m,
+                                   durability_estimator=c,
+                                   failure_domain=failure_domain)
         except CalledProcessError as e:
             log(e)
+            action_fail("Create erasure profile failed with "
+                        "message: {}".format(e.message))
     else:
         # Unknown erasure plugin
-        log("Unknown erasure-plugin type of {}. Only jerasure, isa, local or shec is allowed".format(plugin))
-        sys.exit(-1)
+        action_fail("Unknown erasure-plugin type of {}. "
+                    "Only jerasure, isa, local or shec is "
+                    "allowed".format(plugin))
 
 
 if __name__ == '__main__':

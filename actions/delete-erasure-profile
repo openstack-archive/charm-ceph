@@ -1,17 +1,23 @@
 #!/usr/bin/python2.7
+from subprocess import CalledProcessError
+
 __author__ = 'chris'
 import sys
 
 sys.path.append('hooks')
 
 from charmhelpers.contrib.storage.linux.ceph import remove_erasure_profile
-from charmhelpers.core.hookenv import action_get, log
+from charmhelpers.core.hookenv import action_get, log, action_fail
 
 
 def delete_erasure_profile():
     name = action_get("name")
 
-    remove_erasure_profile(service='admin', profile_name=name)
+    try:
+        remove_erasure_profile(service='admin', profile_name=name)
+    except CalledProcessError as e:
+        action_fail("Remove erasure profile failed with error: {}".format(
+            e.message))
 
 
 if __name__ == '__main__':

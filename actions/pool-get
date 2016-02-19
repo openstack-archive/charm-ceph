@@ -5,7 +5,7 @@ from subprocess import check_output, CalledProcessError
 
 sys.path.append('hooks')
 
-from charmhelpers.core.hookenv import log, action_set, action_get
+from charmhelpers.core.hookenv import log, action_set, action_get, action_fail
 
 if __name__ == '__main__':
     name = action_get('pool-name')
@@ -16,3 +16,4 @@ if __name__ == '__main__':
         action_set({'message': out})
     except CalledProcessError as e:
         log(e)
+        action_fail("Pool get failed with message: {}".format(e.message))
