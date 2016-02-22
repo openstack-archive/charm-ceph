@@ -15,7 +15,7 @@
 # along with charm-helpers.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from subprocess import check_call
+from subprocess import check_call, CalledProcessError
 from charmhelpers.fetch import (
     BaseFetchHandler,
     UnhandledSource,
@@ -23,9 +23,9 @@ from charmhelpers.fetch import (
     apt_install,
 )
 
-if filter_installed_packages(['git']):
+if filter_installed_packages(['git']) != []:
     apt_install(['git'])
-    if filter_installed_packages(['git']):
+    if filter_installed_packages(['git']) != []:
         raise NotImplementedError('Unable to install git')
 
 
@@ -63,6 +63,8 @@ class GitUrlFetchHandler(BaseFetchHandler):
                                     branch_name)
         try:
             self.clone(source, dest_dir, branch, depth)
+        except CalledProcessError as e:
+            raise UnhandledSource(e)
         except OSError as e:
             raise UnhandledSource(e.strerror)
         return dest_dir
