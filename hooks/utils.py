@@ -85,23 +85,27 @@ def get_networks(config_opt='ceph-public-network'):
     return []
 
 
-def get_public_addr(fallback=None):
+def get_public_addr():
+    return get_network_addrs('ceph-public-network', fallback=get_host_ip())[0]
+
+
+def get_network_addrs(config_opt, fallback=None):
     """Get all configured public networks addresses.
 
-    If public network(s) are provided, go through them and return the first
-    address we have configured on any of those networks.
+    If public network(s) are provided, go through them and return the
+    addresses we have configured on any of those networks.
     """
     addrs = []
-    networks = config('ceph-public-network')
+    networks = config(config_opt)
     if networks:
         networks = networks.split()
         addrs = [get_address_in_network(n) for n in networks]
         addrs = [a for a in addrs if a]
 
     if not addrs and fallback:
-        return fallback
+        return [fallback]
 
-    return addrs[0]
+    return addrs
 
 
 def assert_charm_supports_ipv6():

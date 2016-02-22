@@ -56,7 +56,6 @@ from charmhelpers.core.sysctl import create as create_sysctl
 from charmhelpers.core.templating import render
 
 from utils import (
-    get_host_ip,
     get_networks,
     get_public_addr,
     assert_charm_supports_ipv6
@@ -202,7 +201,7 @@ def get_osd_journal():
 
 def get_mon_hosts():
     hosts = []
-    addr = get_public_addr(fallback=get_host_ip())
+    addr = get_public_addr()
     hosts.append('{}:6789'.format(format_ipv6_addr(addr) or addr))
 
     for relid in relation_ids('mon'):
@@ -252,7 +251,7 @@ def get_devices():
 
 @hooks.hook('mon-relation-joined')
 def mon_relation_joined():
-    public_addr = get_public_addr(fallback=get_host_ip())
+    public_addr = get_public_addr()
     for relid in relation_ids('mon'):
         relation_set(relation_id=relid,
                      relation_settings={'ceph-public-address':
@@ -313,7 +312,7 @@ def upgrade_keys():
 def osd_relation(relid=None):
     if ceph.is_quorum():
         log('mon cluster in quorum - providing fsid & keys')
-        public_addr = get_public_addr(fallback=get_host_ip())
+        public_addr = get_public_addr()
         data = {
             'fsid': config('fsid'),
             'osd_bootstrap_key': ceph.get_osd_bootstrap_key(),
@@ -343,7 +342,7 @@ def radosgw_relation(relid=None):
                 unit_id = remote_unit().replace('/', '-')
                 unit_response_key = 'broker-rsp-' + unit_id
                 log('mon cluster in quorum - providing radosgw with keys')
-                public_addr = get_public_addr(fallback=get_host_ip())
+                public_addr = get_public_addr()
                 data = {
                     'fsid': config('fsid'),
                     'radosgw_key': ceph.get_radosgw_key(),
@@ -370,7 +369,7 @@ def client_relation_joined(relid=None):
                 service_name = units[0].split('/')[0]
 
         if service_name is not None:
-            public_addr = get_public_addr(fallback=get_host_ip())
+            public_addr = get_public_addr()
             data = {'key': ceph.get_named_key(service_name),
                     'auth': config('auth-supported'),
                     'ceph-public-address': public_addr}
