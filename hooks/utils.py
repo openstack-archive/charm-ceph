@@ -12,7 +12,8 @@ import re
 from charmhelpers.core.hookenv import (
     unit_get,
     cached,
-    config
+    config,
+    status_set,
 )
 from charmhelpers.fetch import (
     apt_install,
@@ -86,10 +87,10 @@ def get_networks(config_opt='ceph-public-network'):
 
 
 def get_public_addr():
-    return get_network_addrs('ceph-public-network', fallback=get_host_ip())[0]
+    return get_network_addrs('ceph-public-network')[0]
 
 
-def get_network_addrs(config_opt, fallback=None):
+def get_network_addrs(config_opt):
     """Get all configured public networks addresses.
 
     If public network(s) are provided, go through them and return the
@@ -102,8 +103,14 @@ def get_network_addrs(config_opt, fallback=None):
         addrs = [get_address_in_network(n) for n in networks]
         addrs = [a for a in addrs if a]
 
-    if not addrs and fallback:
-        return [fallback]
+    if not addrs:
+        if networks:
+            msg = ("Could not find an address on any of '%s' - resolve this "
+                   "error to retry" % (networks))
+            status_set('blocked', msg)
+            raise Exception(msg)
+        else:
+            return [get_host_ip()]
 
     return addrs
 
