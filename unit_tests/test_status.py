@@ -31,7 +31,6 @@ ENOUGH_PEERS_COMPLETE = {
 
 
 class ServiceStatusTestCase(test_utils.CharmTestCase):
-
     def setUp(self):
         super(ServiceStatusTestCase, self).setUp(hooks, TO_PATCH)
         self.config.side_effect = self.test_config.get
