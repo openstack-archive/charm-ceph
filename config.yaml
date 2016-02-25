@@ -142,12 +142,18 @@ options:
     description: |
       The IP address and netmask of the public (front-side) network (e.g.,
       192.168.0.0/24)
+      .
+      If multiple networks are to be used, a space-delimited list of a.b.c.d/x
+      can be provided.
   ceph-cluster-network:
     type: string
     default:
     description: |
       The IP address and netmask of the cluster (back-side) network (e.g.,
       192.168.0.0/24)
+      .
+      If multiple networks are to be used, a space-delimited list of a.b.c.d/x
+      can be provided.
   prefer-ipv6:
     type: boolean
     default: False
