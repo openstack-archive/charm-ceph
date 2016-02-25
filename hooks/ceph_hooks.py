@@ -107,6 +107,7 @@ def emit_cephconf():
         'ceph_public_network': public_network,
         'ceph_cluster_network': cluster_network,
         'loglevel': config('loglevel'),
+        'dio': str(config('use-direct-io')).lower(),
     }
 
     if config('prefer-ipv6'):
@@ -238,7 +239,9 @@ def reformat_osd():
 
 def get_devices():
     if config('osd-devices'):
-        devices = config('osd-devices').split(' ')
+        devices = [
+            os.path.realpath(path)
+            for path in config('osd-devices').split(' ')]
     else:
         devices = []
     # List storage instances for the 'osd-devices'
@@ -272,6 +275,7 @@ def mon_relation():
             ceph.osdize(dev, config('osd-format'), get_osd_journal(),
                         reformat_osd(), config('ignore-device-errors'))
         ceph.start_osds(get_devices())
+        ceph.wait_for_quorum()
         notify_osds()
         notify_radosgws()
         notify_client()
@@ -287,7 +291,8 @@ def notify_osds():
 
 def notify_radosgws():
     for relid in relation_ids('radosgw'):
-        radosgw_relation(relid)
+        for unit in related_units(relid):
+            radosgw_relation(relid=relid, unit=unit)
 
 
 def notify_client():
@@ -327,19 +332,20 @@ def osd_relation(relid=None):
 
 @hooks.hook('radosgw-relation-changed')
 @hooks.hook('radosgw-relation-joined')
-def radosgw_relation(relid=None):
+def radosgw_relation(relid=None, unit=None):
     # Install radosgw for admin tools
     apt_install(packages=filter_installed_packages(['radosgw']))
-
+    if not unit:
+        unit = remote_unit()
     """Process broker request(s)."""
     if ceph.is_quorum():
-        settings = relation_get(rid=relid)
+        settings = relation_get(rid=relid, unit=unit)
         if 'broker_req' in settings:
             if not ceph.is_leader():
                 log("Not leader - ignoring broker request", level=DEBUG)
             else:
                 rsp = process_requests(settings['broker_req'])
-                unit_id = remote_unit().replace('/', '-')
+                unit_id = unit.replace('/', '-')
                 unit_response_key = 'broker-rsp-' + unit_id
                 log('mon cluster in quorum - providing radosgw with keys')
                 public_addr = get_public_addr()

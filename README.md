@@ -9,15 +9,15 @@ juju
 # Usage
 
 The ceph charm has two pieces of mandatory configuration for which no defaults
-are provided. You _must_ set these configuration options before deployment or the charm will not work: 
+are provided. You _must_ set these configuration options before deployment or the charm will not work:
 
     fsid:
         uuid specific to a ceph cluster used to ensure that different
         clusters don't get mixed up - use `uuid` to generate one.
 
-    monitor-secret: 
+    monitor-secret:
         a ceph generated key used by the daemons that manage to cluster
-        to control security.  You can use the ceph-authtool command to 
+        to control security.  You can use the ceph-authtool command to
         generate one:
 
             ceph-authtool /dev/stdout --name=mon. --gen-key
@@ -45,7 +45,7 @@ At a minimum you must provide a juju config file during initial deployment
 with the fsid and monitor-secret options (contents of cepy.yaml below):
 
     ceph:
-        fsid: ecbb8960-0e21-11e2-b495-83a88f44db01 
+        fsid: ecbb8960-0e21-11e2-b495-83a88f44db01
         monitor-secret: AQD1P2xQiKglDhAA4NGUF5j38Mhq56qwz+45wg==
         osd-devices: /dev/vdb /dev/vdc /dev/vdd /dev/vde
 
@@ -58,6 +58,12 @@ Boot things up by using:
 By default the ceph cluster will not bootstrap until 3 service units have been
 deployed and started; this is to ensure that a quorum is achieved prior to adding
 storage devices.
+
+## Actions
+
+This charm supports pausing and resuming ceph's health functions on a cluster, for example when doing maintainance on a machine. to pause or resume, call:
+
+`juju action do --unit ceph/0 pause-health` or `juju action do --unit ceph/0 resume-health`
 
 ## Scale Out Usage
 
