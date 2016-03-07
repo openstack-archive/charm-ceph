@@ -13,6 +13,8 @@ from charmhelpers.core.hookenv import (
     unit_get,
     cached,
     config,
+    network_get_primary_address,
+    log, DEBUG,
     status_set,
 )
 from charmhelpers.fetch import (
@@ -72,6 +74,32 @@ def get_host_ip(hostname=None):
             return answers[0].address
 
 
+@cached
+def get_public_addr():
+    if config('ceph-public-network'):
+        return get_network_addrs('ceph-public-network')[0]
+
+    try:
+        return network_get_primary_address('public')
+    except NotImplementedError:
+        log("network-get not supported", DEBUG)
+
+    return get_host_ip()
+
+
+@cached
+def get_cluster_addr():
+    if config('ceph-cluster-network'):
+        return get_network_addrs('ceph-cluster-network')[0]
+
+    try:
+        return network_get_primary_address('cluster')
+    except NotImplementedError:
+        log("network-get not supported", DEBUG)
+
+    return get_host_ip()
+
+
 def get_networks(config_opt='ceph-public-network'):
     """Get all configured networks from provided config option.
 
@@ -84,10 +112,6 @@ def get_networks(config_opt='ceph-public-network'):
         return [n for n in networks if get_address_in_network(n)]
 
     return []
-
-
-def get_public_addr():
-    return get_network_addrs('ceph-public-network')[0]
 
 
 def get_network_addrs(config_opt):
