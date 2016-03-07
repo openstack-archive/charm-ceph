@@ -72,6 +72,29 @@ You can use the Ceph OSD and Ceph Radosgw charms:
 - [Ceph OSD](https://jujucharms.com/precise/ceph-osd)
 - [Ceph Rados Gateway](https://jujucharms.com/precise/ceph-radosgw)
 
+## Network Space support
+
+This charm supports the use of Juju Network Spaces, allowing the charm to be bound to network space configurations managed directly by Juju.  This is only supported with Juju 2.0 and above.
+
+Network traffic can be bound to specific network spaces using the public (front-side) and cluster (back-side) bindings:
+
+    juju deploy ceph --bind "public=data-space cluster=cluster-space"
+
+alternatively these can also be provided as part of a Juju native bundle configuration:
+
+    ceph:
+      charm: cs:xenial/ceph
+      num_units: 1
+      bindings:
+        public: data-space
+        cluster: cluster-space
+
+Please refer to the [Ceph Network Reference](http://docs.ceph.com/docs/master/rados/configuration/network-config-ref) for details on how using these options effects network traffic within a Ceph deployment.
+
+**NOTE:** Spaces must be configured in the underlying provider prior to attempting to use them.
+
+**NOTE**: Existing deployments using ceph-*-network configuration options will continue to function; these options are preferred over any network space binding provided if set.
+
 # Contact Information
 
 ## Authors 
