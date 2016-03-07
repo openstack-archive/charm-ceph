@@ -68,6 +68,7 @@ from charmhelpers.contrib.storage.linux.ceph import (
 from utils import (
     get_networks,
     get_public_addr,
+    get_cluster_addr,
     assert_charm_supports_ipv6
 )
 from ceph_broker import (
@@ -307,6 +308,9 @@ def emit_cephconf():
             cephcontext['public_addr'] = dynamic_ipv6_address
         if not cluster_network:
             cephcontext['cluster_addr'] = dynamic_ipv6_address
+    else:
+        cephcontext['public_addr'] = get_public_addr()
+        cephcontext['cluster_addr'] = get_cluster_addr()
 
     # Install ceph.conf as an alternative to support
     # co-existence with other charms that write this file
