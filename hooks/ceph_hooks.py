@@ -252,6 +252,13 @@ def get_devices():
     return devices
 
 
+def is_storage_fine():
+    for dev in get_devices():
+        if not os.path.exists(dev):
+            return False
+    return True
+
+
 @hooks.hook('mon-relation-joined')
 def mon_relation_joined():
     public_addr = get_public_addr()
@@ -474,6 +481,11 @@ def assess_status():
     ready = sum(1 for unit_ready in units.itervalues() if unit_ready)
     if ready < moncount:
         status_set('waiting', 'Peer units detected, waiting for addresses')
+        return
+
+    # check storage state
+    if not is_storage_fine():
+        status_set('blocked', 'No usable storage devices found')
         return
 
     # active - bootstrapped + quorum status check
