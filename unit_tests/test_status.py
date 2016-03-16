@@ -49,33 +49,19 @@ class ServiceStatusTestCase(test_utils.CharmTestCase):
         hooks.assess_status()
         self.status_set.assert_called_with('waiting', mock.ANY)
 
-    @mock.patch.object(hooks, 'is_storage_fine')
     @mock.patch.object(hooks, 'get_peer_units')
-    def test_assess_status_peers_complete_active(self, _peer_units, _storage):
+    def test_assess_status_peers_complete_active(self, _peer_units):
         _peer_units.return_value = ENOUGH_PEERS_COMPLETE
         self.ceph.is_bootstrapped.return_value = True
         self.ceph.is_quorum.return_value = True
-        _storage.return_value = True
         hooks.assess_status()
         self.status_set.assert_called_with('active', mock.ANY)
 
-    @mock.patch.object(hooks, 'is_storage_fine')
     @mock.patch.object(hooks, 'get_peer_units')
-    def test_assess_status_peers_complete_down(self, _peer_units, _storage):
+    def test_assess_status_peers_complete_down(self, _peer_units):
         _peer_units.return_value = ENOUGH_PEERS_COMPLETE
         self.ceph.is_bootstrapped.return_value = False
         self.ceph.is_quorum.return_value = False
-        _storage.return_value = False
-        hooks.assess_status()
-        self.status_set.assert_called_with('blocked', mock.ANY)
-
-    @mock.patch.object(hooks, 'is_storage_fine')
-    @mock.patch.object(hooks, 'get_peer_units')
-    def test_assess_status_storage_fail(self, _peer_units, _storage):
-        _peer_units.return_value = ENOUGH_PEERS_COMPLETE
-        self.ceph.is_bootstrapped.return_value = True
-        self.ceph.is_quorum.return_value = True
-        _storage.return_value = False
         hooks.assess_status()
         self.status_set.assert_called_with('blocked', mock.ANY)
 
