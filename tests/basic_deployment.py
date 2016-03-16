@@ -79,6 +79,9 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
                            'admin-token': 'ubuntutesting'}
         mysql_config = {'dataset-size': '50%'}
         cinder_config = {'block-device': 'None', 'glance-api-version': '2'}
+
+        # Include a non-existent device as osd-devices is a whitelist,
+        # and this will catch cases where proposals attempt to change that.
         ceph_config = {
             'monitor-count': '3',
             'auth-supported': 'none',
@@ -86,7 +89,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
             'monitor-secret': 'AQCXrnZQwI7KGBAAiPofmKEXKxu5bUzoYLVkbQ==',
             'osd-reformat': 'yes',
             'ephemeral-unmount': '/mnt',
-            'osd-devices': '/dev/vdb /srv/ceph'
+            'osd-devices': '/dev/vdb /srv/ceph /dev/test-non-existent'
         }
 
         configs = {'keystone': keystone_config,
