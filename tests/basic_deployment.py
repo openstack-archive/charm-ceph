@@ -49,7 +49,8 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
                           {'name': 'rabbitmq-server'},
                           {'name': 'nova-compute'},
                           {'name': 'glance'},
-                          {'name': 'cinder'}]
+                          {'name': 'cinder'},
+                          {'name': 'ceph-osd'}]
         super(CephBasicDeployment, self)._add_services(this_service,
                                                        other_services)
 
@@ -69,7 +70,8 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
             'cinder:identity-service': 'keystone:identity-service',
             'cinder:amqp': 'rabbitmq-server:amqp',
             'cinder:image-service': 'glance:image-service',
-            'cinder:ceph': 'ceph:client'
+            'cinder:ceph': 'ceph:client',
+            'ceph-osd:mon': 'ceph:osd'
         }
         super(CephBasicDeployment, self)._add_relations(relations)
 
@@ -92,10 +94,17 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
             'osd-devices': '/dev/vdb /srv/ceph /dev/test-non-existent'
         }
 
+        ceph_osd_config = {
+            'osd-reformat': 'yes',
+            'ephemeral-unmount': '/mnt',
+            'osd-devices': '/dev/vdb /srv/ceph /dev/test-non-existent'
+        }
+
         configs = {'keystone': keystone_config,
                    'mysql': mysql_config,
                    'cinder': cinder_config,
-                   'ceph': ceph_config}
+                   'ceph': ceph_config,
+                   'ceph-osd': ceph_osd_config}
         super(CephBasicDeployment, self)._configure_services(configs)
 
     def _initialize_tests(self):
@@ -110,6 +119,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         self.ceph0_sentry = self.d.sentry.unit['ceph/0']
         self.ceph1_sentry = self.d.sentry.unit['ceph/1']
         self.ceph2_sentry = self.d.sentry.unit['ceph/2']
+        self.ceph_osd_sentry = self.d.sentry.unit['ceph-osd/0']
         u.log.debug('openstack release val: {}'.format(
             self._get_openstack_release()))
         u.log.debug('openstack release str: {}'.format(
