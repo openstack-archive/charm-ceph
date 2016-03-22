@@ -197,3 +197,9 @@ options:
     default: True
     type: boolean
     description: Configure use of direct IO for OSD journals.
+  harden:
+    default:
+    type: string
+    description: |
+      Apply system hardening. Supports a space-delimited list of modules
+      to run. Supported modules currently include os, ssh, apache and mysql.

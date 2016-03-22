@@ -1,10 +1,22 @@
 import os.path
 import shutil
+import sys
 import tempfile
 
 import test_utils
 
-import ceph_hooks as hooks
+from mock import patch, MagicMock
+
+# python-apt is not installed as part of test-requirements but is imported by
+# some charmhelpers modules so create a fake import.
+mock_apt = MagicMock()
+sys.modules['apt'] = mock_apt
+mock_apt.apt_pkg = MagicMock()
+
+with patch('charmhelpers.contrib.hardening.harden.harden') as mock_dec:
+    mock_dec.side_effect = (lambda *dargs, **dkwargs: lambda f:
+                            lambda *args, **kwargs: f(*args, **kwargs))
+    import ceph_hooks as hooks
 
 TO_PATCH = [
     'config',
