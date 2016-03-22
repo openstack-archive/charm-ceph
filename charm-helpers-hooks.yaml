@@ -11,3 +11,4 @@ include:
     - contrib.openstack.alternatives
     - contrib.network.ip
     - contrib.charmsupport
+    - contrib.hardening|inc=*
