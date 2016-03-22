@@ -1,10 +1,20 @@
 __author__ = 'chris'
 
+import sys
 import json
-from hooks import ceph_broker
-
 import mock
 import unittest
+
+# python-apt is not installed as part of test-requirements but is imported by
+# some charmhelpers modules so create a fake import.
+mock_apt = mock.MagicMock()
+sys.modules['apt'] = mock_apt
+mock_apt.apt_pkg = mock.MagicMock()
+
+with mock.patch('charmhelpers.contrib.hardening.harden.harden') as mock_dec:
+    mock_dec.side_effect = (lambda *dargs, **dkwargs: lambda f:
+                            lambda *args, **kwargs: f(*args, **kwargs))
+    from hooks import ceph_broker
 
 
 class TestCephOps(unittest.TestCase):
