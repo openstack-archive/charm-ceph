@@ -1,4 +1,3 @@
-
 #
 # Copyright 2012 Canonical Ltd.
 #
@@ -6,34 +5,31 @@
 #  James Page <james.page@canonical.com>
 #  Paul Collins <paul.collins@canonical.com>
 #
-
 import json
 import subprocess
 import time
 import os
 import re
 import sys
+
+from charmhelpers.contrib.storage.linux.utils import (
+    is_block_device,
+    zap_disk,
+    is_device_mounted)
 from charmhelpers.core.host import (
     mkdir,
     chownr,
     service_restart,
-    cmp_pkgrevno,
-    lsb_release
-)
+    lsb_release,
+    cmp_pkgrevno)
 from charmhelpers.core.hookenv import (
     log,
     ERROR,
-    WARNING,
     cached,
     status_set,
-)
+    WARNING)
 from charmhelpers.fetch import (
     apt_cache
-)
-from charmhelpers.contrib.storage.linux.utils import (
-    zap_disk,
-    is_block_device,
-    is_device_mounted,
 )
 from utils import (
     get_unit_hostname,
@@ -53,8 +49,32 @@ def ceph_user():
         return "root"
 
 
+def get_local_mon_ids():
+    """
+    This will list the /var/lib/ceph/mon/* directories and try
+    to split the ID off of the directory name and return it in
+    a list
+
+    :return: list.  A list of monitor identifiers :raise: OSError if
+     something goes wrong with listing the directory.
+    """
+    mon_ids = []
+    mon_path = os.path.join(os.sep, 'var', 'lib', 'ceph', 'mon')
+    if os.path.exists(mon_path):
+        try:
+            dirs = os.listdir(mon_path)
+            for mon_dir in dirs:
+                # Basically this takes everything after ceph- as the monitor ID
+                match = re.search('ceph-(?P<mon_id>.*)', mon_dir)
+                if match:
+                    mon_ids.append(match.group('mon_id'))
+        except OSError:
+            raise
+    return mon_ids
+
+
 def get_version():
-    '''Derive Ceph release from an installed package.'''
+    """Derive Ceph release from an installed package."""
     import apt_pkg as apt
 
     cache = apt_cache()
@@ -63,7 +83,7 @@ def get_version():
         pkg = cache[package]
     except:
         # the package is unknown to the current apt cache.
-        e = 'Could not determine version of package with no installation '\
+        e = 'Could not determine version of package with no installation ' \
             'candidate: %s' % package
         error_out(e)
 
@@ -165,6 +185,7 @@ def add_bootstrap_hint(peer):
         # Ignore any errors for this call
         subprocess.call(cmd)
 
+
 DISK_FORMATS = [
     'xfs',
     'ext4',
@@ -178,7 +199,7 @@ def is_osd_disk(dev):
         info = info.split("\n")  # IGNORE:E1103
         for line in info:
             if line.startswith(
-                'Partition GUID code: 4FBD7E29-9D25-41B8-AFD0-062C0CEFF05D'
+                    'Partition GUID code: 4FBD7E29-9D25-41B8-AFD0-062C0CEFF05D'
             ):
                 return True
     except subprocess.CalledProcessError:
@@ -213,7 +234,7 @@ def is_bootstrapped():
 
 
 def wait_for_bootstrap():
-    while (not is_bootstrapped()):
+    while not is_bootstrapped():
         time.sleep(3)
 
 
@@ -230,6 +251,19 @@ def import_osd_bootstrap_key(key):
             '--add-key={}'.format(key)
         ]
         subprocess.check_call(cmd)
+
+
+def generate_monitor_secret():
+    cmd = [
+        'ceph-authtool',
+        '/dev/stdout',
+        '--name=mon.',
+        '--gen-key'
+    ]
+    res = subprocess.check_output(cmd)
+
+    return "{}==".format(res.split('=')[1].strip())
+
 
 # OSD caps taken from ceph-create-keys
 _osd_bootstrap_caps = {
@@ -297,6 +331,9 @@ _radosgw_caps = {
     'mon': ['allow rw'],
     'osd': ['allow rwx']
 }
+_upgrade_caps = {
+    'mon': ['allow rwx']
+}
 
 osd_upgrade_caps = {
     'mon': ['allow command "config-key"',
@@ -317,6 +354,26 @@ _default_caps = {
     'mon': ['allow rw'],
     'osd': ['allow rwx']
 }
+
+admin_caps = {
+    'mds': ['allow'],
+    'mon': ['allow *'],
+    'osd': ['allow *']
+}
+
+osd_upgrade_caps = {
+    'mon': ['allow command "config-key"',
+            'allow command "osd tree"',
+            'allow command "config-key list"',
+            'allow command "config-key put"',
+            'allow command "config-key get"',
+            'allow command "config-key exists"',
+            ]
+}
+
+
+def get_upgrade_key():
+    return get_named_key('upgrade-osd', _upgrade_caps)
 
 
 def get_named_key(name, caps=None):
@@ -343,7 +400,7 @@ def get_named_key(name, caps=None):
 
 
 def upgrade_key_caps(key, caps):
-    ''' Upgrade key to have capabilities caps '''
+    """ Upgrade key to have capabilities caps """
     if not is_leader():
         # Not the MON leader OR not clustered
         return
@@ -437,7 +494,7 @@ def osdize_dev(dev, osd_format, osd_journal, reformat_osd=False,
         log('Path {} is not a block device - bailing'.format(dev))
         return
 
-    if (is_osd_disk(dev) and not reformat_osd):
+    if is_osd_disk(dev) and not reformat_osd:
         log('Looks like {} is already an OSD, skipping.'.format(dev))
         return
 
