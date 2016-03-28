@@ -298,6 +298,15 @@ _radosgw_caps = {
     'osd': ['allow rwx']
 }
 
+osd_upgrade_caps = {
+    'mon': ['allow command "config-key"',
+            'allow command "osd tree"',
+            'allow command "config-key list"',
+            'allow command "config-key put"',
+            'allow command "config-key get"',
+            'allow command "config-key exists"',
+            ]
+}
 
 def get_radosgw_key():
     return get_named_key('radosgw.gateway', _radosgw_caps)
