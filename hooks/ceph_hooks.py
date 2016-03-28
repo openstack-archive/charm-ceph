@@ -323,6 +323,8 @@ def osd_relation(relid=None):
             'osd_bootstrap_key': ceph.get_osd_bootstrap_key(),
             'auth': config('auth-supported'),
             'ceph-public-address': public_addr,
+            'osd_upgrade_key': ceph.get_named_key('osd-upgrade',
+                                                  caps=ceph.osd_upgrade_caps),
         }
         relation_set(relation_id=relid,
                      relation_settings=data)
