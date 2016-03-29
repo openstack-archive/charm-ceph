@@ -7,6 +7,10 @@ include:
     - contrib.storage.linux:
         - utils
         - ceph
+        - lvm
+        - loopback
+    - contrib.openstack.utils
+    - contrib.python
     - payload.execd
     - contrib.openstack.alternatives
     - contrib.network.ip

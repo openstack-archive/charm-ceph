@@ -2,10 +2,19 @@ pause-health:
   description: Pause ceph health operations across the entire ceph cluster
 resume-health:
   description: Resume ceph health operations across the entire ceph cluster
+pause:
+  description: |
+      Pause the ceph unit.  This action will stop ceph services.  The
+      cluster will not go unhealthy as the pause-health action is implicitly
+      called as part of this action.
+resume:
+  descrpition: |
+      Resume the ceph unit.  This action will start ceph services.
+      This action also implicitly calls the resume-health action.
 create-pool:
   description: Creates a pool
   params:
-    name: 
+    name:
       type: string
       description: The name of the pool
     profile-name:
@@ -77,7 +86,7 @@ create-erasure-profile:
 get-erasure-profile:
   description: Display an erasure code profile.
   params:
-    name: 
+    name:
       type: string
       description: The name of the profile
   required: [name]
@@ -99,7 +108,7 @@ list-pools:
 set-pool-max-bytes:
   description: Set pool quotas for the maximum number of bytes.
   params:
-    max: 
+    max:
       type: integer
       description: The name of the pool
     pool-name:
@@ -132,10 +141,10 @@ pool-statistics:
 snapshot-pool:
   description: Snapshot a pool
   params:
-    pool-name: 
+    pool-name:
       type: string
       description: The name of the pool
-    snapshot-name: 
+    snapshot-name:
       type: string
       description: The name of the snapshot
   required: [snapshot-name, pool-name]
@@ -143,10 +152,10 @@ snapshot-pool:
 remove-pool-snapshot:
   description: Remove a pool snapshot
   params:
-    pool-name: 
+    pool-name:
       type: string
       description: The name of the pool
-    snapshot-name: 
+    snapshot-name:
       type: string
       description: The name of the snapshot
   required: [snapshot-name, pool-name]

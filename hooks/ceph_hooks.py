@@ -63,11 +63,21 @@ from utils import (
 from ceph_broker import (
     process_requests
 )
-
 from charmhelpers.contrib.charmsupport import nrpe
 from charmhelpers.contrib.hardening.harden import harden
+from charmhelpers.contrib.openstack.utils import (
+    pause_unit,
+    resume_unit,
+    make_assess_status_func,
+    is_unit_paused_set,
+)
 
 hooks = Hooks()
+
+# NOTE(ajkavanagh) - this is for the new pause/resume maintenance mode
+# functionality and can be used later to enforce interface checks.
+REQUIRED_INTERFACES = {
+}
 
 NAGIOS_PLUGINS = '/usr/local/lib/nagios/plugins'
 SCRIPTS_DIR = '/usr/local/bin'
@@ -426,12 +436,14 @@ def upgrade_charm():
 def start():
     # In case we're being redeployed to the same machines, try
     # to make sure everything is running as soon as possible.
-    if ceph.systemd():
-        service_restart('ceph-mon')
-    else:
-        service_restart('ceph-mon-all')
-    if ceph.is_bootstrapped():
-        ceph.start_osds(get_devices())
+    # BUT only if the unit is not in maintenance mode
+    if not is_unit_paused_set():
+        if ceph.systemd():
+            service_restart('ceph-mon')
+        else:
+            service_restart('ceph-mon-all')
+        if ceph.is_bootstrapped():
+            ceph.start_osds(get_devices())
 
 
 @hooks.hook('nrpe-external-master-relation-joined')
@@ -464,29 +476,137 @@ def update_nrpe_config():
     nrpe_setup.write()
 
 
-def assess_status():
-    '''Assess status of current unit'''
+def check_charm_func():
+    """Assess status of current unit
+
+    @return (state, message) - strings representing custom state of unit
+    """
     moncount = int(config('monitor-count'))
     units = get_peer_units()
     # not enough peers and mon_count > 1
     if len(units.keys()) < moncount:
-        status_set('blocked', 'Insufficient peer units to bootstrap'
-                              ' cluster (require {})'.format(moncount))
-        return
+        return ('blocked',
+                'Insufficient peer units to bootstrap'
+                ' cluster (require {})'.format(moncount))
 
     # mon_count > 1, peers, but no ceph-public-address
     ready = sum(1 for unit_ready in units.itervalues() if unit_ready)
     if ready < moncount:
-        status_set('waiting', 'Peer units detected, waiting for addresses')
-        return
+        return ('waiting', 'Peer units detected, waiting for addresses')
 
     # active - bootstrapped + quorum status check
     if ceph.is_bootstrapped() and ceph.is_quorum():
-        status_set('active', 'Unit is ready and clustered')
+        return ('active', 'Unit is ready and clustered')
     else:
         # Unit should be running and clustered, but no quorum
         # TODO: should this be blocked or waiting?
-        status_set('blocked', 'Unit not clustered (no quorum)')
+        return ('blocked', 'Unit not clustered (no quorum)')
+
+
+def services():
+    """List of services that this charm looks after.
+    The list depends on whether the charm is on a systemd or upstart system.
+    If upstart then the single service 'ceph-mon-all' is used, else the single
+    service 'ceph-mon' is used on systemd.
+
+    @returns [string] - list of strings for names of services.
+    """
+    if ceph.systemd():
+        return ("ceph-mon", )
+    else:
+        return ('ceph-mon-all', )
+
+
+class FakeOSConfigRenderer(object):
+    """This class is to provide to register_configs() as a 'fake'
+    OSConfigRenderer object that has a complete_contexts method that returns
+    an empty list.  This is so that the pause/resume framework can be used
+    from charmhelpers that requires configs to be able to run.
+    This is a bit of a hack, but via Python's duck-typing enables the function
+    to work.
+    """
+    def complete_contexts(self):
+        return []
+
+
+def register_configs():
+    """Return a OSConfigRenderer object.
+    However, ceph-mon wasn't written using OSConfigRenderer objects to do the
+    config files, so this just returns an empty OSConfigRenderer object.
+
+    @returns empty FakeOSConfigRenderer object.
+    """
+    return FakeOSConfigRenderer()
+
+
+def assess_status(configs):
+    """Assess status of current unit
+    Decides what the state of the unit should be based on the current
+    configuration.
+    SIDE EFFECT: calls set_os_workload_status(...) which sets the workload
+    status of the unit.
+    Also calls status_set(...) directly if paused state isn't complete.
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    assess_status_func(configs)()
+
+
+def assess_status_func(configs):
+    """Helper function to create the function that will assess_status() for
+    the unit.
+    Uses charmhelpers.contrib.openstack.utils.make_assess_status_func() to
+    create the appropriate status function and then returns it.
+    Used directly by assess_status() and also for pausing and resuming
+    the unit.
+
+    NOTE(ajkavanagh) ports are not checked due to race hazards with services
+    that don't behave sychronously w.r.t their service scripts.  e.g.
+    apache2.
+    @param configs: a templating.OSConfigRenderer() object
+    @return f() -> None : a function that assesses the unit's workload status
+    """
+    # Note 'odd' lambda is needed as charm_func takes configs, but
+    # charm_check_func() doesn't need them (and thus would make the function
+    # look more complex).
+    return make_assess_status_func(
+        configs, REQUIRED_INTERFACES,
+        charm_func=lambda _: check_charm_func(),
+        services=services(), ports=None)
+
+
+def pause_unit_helper(configs):
+    """Helper function to pause a unit, and then call assess_status(...) in
+    effect, so that the status is correctly updated.
+    Uses charmhelpers.contrib.openstack.utils.pause_unit() to do the work.
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    _pause_resume_helper(pause_unit, configs)
+
+
+def resume_unit_helper(configs):
+    """Helper function to resume a unit, and then call assess_status(...) in
+    effect, so that the status is correctly updated.
+    Uses charmhelpers.contrib.openstack.utils.resume_unit() to do the work.
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    _pause_resume_helper(resume_unit, configs)
+
+
+def _pause_resume_helper(f, configs):
+    """Helper function that uses the make_assess_status_func(...) from
+    charmhelpers.contrib.openstack.utils to create an assess_status(...)
+    function that can be used with the pause/resume of the unit
+    @param f: the function to be used with the assess_status(...) function
+    @returns None - this function is executed for its side-effect
+    """
+    # TODO(ajkavanagh) - ports= has been left off because of the race hazard
+    # that exists due to service_start()
+    f(assess_status_func(configs),
+      services=services(),
+      ports=None)
 
 
 @hooks.hook('update-status')
@@ -500,4 +620,4 @@ if __name__ == '__main__':
         hooks.execute(sys.argv)
     except UnregisteredHookError as e:
         log('Unknown hook {} - skipping.'.format(e))
-    assess_status()
+    assess_status(register_configs())

@@ -1,0 +1,8 @@
+#!/bin/bash
+PWD=$(dirname $0)
+
+# do the resume action first ...
+$PWD/actions.py resume
+
+# then do resume-health
+exec $PWD/resume-health
