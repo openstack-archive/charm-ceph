@@ -35,6 +35,7 @@ from charmhelpers.contrib.storage.linux.utils import (
     is_block_device,
     is_device_mounted,
 )
+from charmhelpers.contrib.openstack.utils import is_unit_paused_set
 from utils import (
     get_unit_hostname,
 )
@@ -384,11 +385,12 @@ def bootstrap_monitor_cluster(secret):
             with open(init_marker, 'w'):
                 pass
 
-            if systemd():
-                subprocess.check_call(['systemctl', 'enable', 'ceph-mon'])
-                service_restart('ceph-mon')
-            else:
-                service_restart('ceph-mon-all')
+            if not is_unit_paused_set():
+                if systemd():
+                    subprocess.check_call(['systemctl', 'enable', 'ceph-mon'])
+                    service_restart('ceph-mon')
+                else:
+                    service_restart('ceph-mon-all')
         except:
             raise
         finally:
