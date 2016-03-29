@@ -5,3 +5,4 @@ bin
 .tox
 *.sw[nop]
 *.pyc
+tests/*.img

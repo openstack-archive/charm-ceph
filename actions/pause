@@ -1,0 +1,9 @@
+#!/bin/bash
+PWD=$(dirname $0)
+
+# do pause-health first!
+$PWD/pause-health
+
+# this do the pause action
+
+exec $PWD/actions.py pause
