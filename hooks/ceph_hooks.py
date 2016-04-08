@@ -45,7 +45,8 @@ from charmhelpers.core.host import (
     write_file,
     rsync,
     cmp_pkgrevno,
-    service_stop, service_start)
+    service_stop, service_start
+)
 from charmhelpers.fetch import (
     apt_install,
     apt_update,
@@ -64,11 +65,13 @@ from charmhelpers.contrib.storage.linux.ceph import (
     monitor_key_set,
     monitor_key_exists,
     monitor_key_get,
-    get_mon_map)
+    get_mon_map
+)
 from utils import (
     get_networks,
     get_public_addr,
-    assert_charm_supports_ipv6
+    assert_charm_supports_ipv6,
+    is_unit_paused_set,
 )
 from ceph_broker import (
     process_requests
@@ -659,7 +662,12 @@ def update_nrpe_config():
 
 
 def assess_status():
-    '''Assess status of current unit'''
+    """Assess status of current unit"""
+    # check to see if the unit is paused.
+    if is_unit_paused_set():
+        status_set('maintenance',
+                   "Paused. Use 'resume' action to resume normal service.")
+        return
     moncount = int(config('monitor-count'))
     units = get_peer_units()
     # not enough peers and mon_count > 1

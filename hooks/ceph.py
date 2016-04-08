@@ -555,3 +555,35 @@ def osdize_dir(path):
 
 def filesystem_mounted(fs):
     return subprocess.call(['grep', '-wqs', fs, '/proc/mounts']) == 0
+
+
+def get_local_osd_ids():
+    """
+    This will list the /var/lib/ceph/osd/* directories and try
+    to split the ID off of the directory name and return it in
+    a list
+
+    :return: list.  A list of osd identifiers :raise: OSError if
+     something goes wrong with listing the directory.
+    """
+    osd_ids = []
+    osd_path = os.path.join(os.sep, 'var', 'lib', 'ceph', 'osd')
+    if os.path.exists(osd_path):
+        try:
+            dirs = os.listdir(osd_path)
+            for osd_dir in dirs:
+                osd_id = osd_dir.split('-')[1]
+                if _is_int(osd_id):
+                    osd_ids.append(osd_id)
+        except OSError:
+            raise
+    return osd_ids
+
+
+def _is_int(v):
+    """Return True if the object v can be turned into an integer."""
+    try:
+        int(v)
+        return True
+    except ValueError:
+        return False
