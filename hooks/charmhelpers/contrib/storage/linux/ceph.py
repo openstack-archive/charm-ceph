@@ -283,6 +283,7 @@ def get_mon_map(service):
             e.message))
         raise
 
+
 def hash_monitor_names(service):
     """
     Uses the get_mon_map() function to get information about the monitor
