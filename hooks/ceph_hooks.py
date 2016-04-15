@@ -541,26 +541,29 @@ def radosgw_relation(relid=None, unit=None):
     apt_install(packages=filter_installed_packages(['radosgw']))
     if not unit:
         unit = remote_unit()
-    """Process broker request(s)."""
+
     if ceph.is_quorum():
+        log('mon cluster in quorum - providing radosgw with keys')
+        public_addr = get_public_addr()
+        data = {
+            'fsid': config('fsid'),
+            'radosgw_key': ceph.get_radosgw_key(),
+            'auth': config('auth-supported'),
+            'ceph-public-address': public_addr,
+        }
+
         settings = relation_get(rid=relid, unit=unit)
+        """Process broker request(s)."""
         if 'broker_req' in settings:
-            if not ceph.is_leader():
-                log("Not leader - ignoring broker request", level=DEBUG)
-            else:
+            if ceph.is_leader():
                 rsp = process_requests(settings['broker_req'])
                 unit_id = unit.replace('/', '-')
                 unit_response_key = 'broker-rsp-' + unit_id
-                log('mon cluster in quorum - providing radosgw with keys')
-                public_addr = get_public_addr()
-                data = {
-                    'fsid': config('fsid'),
-                    'radosgw_key': ceph.get_radosgw_key(),
-                    'auth': config('auth-supported'),
-                    'ceph-public-address': public_addr,
-                    unit_response_key: rsp,
-                }
-                relation_set(relation_id=relid, relation_settings=data)
+                data[unit_response_key] = rsp
+            else:
+                log("Not leader - ignoring broker request", level=DEBUG)
+
+        relation_set(relation_id=relid, relation_settings=data)
     else:
         log('mon cluster not in quorum - deferring key provision')
 
