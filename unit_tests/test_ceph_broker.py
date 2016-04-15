@@ -1,6 +1,7 @@
 import json
-import mock
 import unittest
+
+import mock
 
 import ceph_broker
 

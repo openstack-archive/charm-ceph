@@ -7,7 +7,11 @@ import sys
 sys.path.append('/home/chris/repos/ceph-mon/hooks')
 
 import test_utils
-import ceph_hooks
+
+with patch('charmhelpers.contrib.hardening.harden.harden') as mock_dec:
+    mock_dec.side_effect = (lambda *dargs, **dkwargs: lambda f:
+                            lambda *args, **kwargs: f(*args, **kwargs))
+    import ceph_hooks
 
 TO_PATCH = [
     'hookenv',
@@ -111,11 +115,18 @@ class UpgradeRollingTestCase(test_utils.CharmTestCase):
             'Waiting on ip-192-168-1-2 to finish upgrading')
         lock_and_roll.assert_called_with(my_name="ip-192-168-1-3")
 
+    @patch.object(ceph_hooks, 'time')
     @patch('ceph_hooks.monitor_key_get')
     @patch('ceph_hooks.monitor_key_exists')
-    def test_wait_on_previous_node(self,
-                                   monitor_key_exists,
-                                   monitor_key_get):
+    def test_wait_on_previous_node(self, monitor_key_exists, monitor_key_get,
+                                   mock_time):
+        tval = [previous_node_start_time]
+
+        def fake_time():
+            tval[0] += 100
+            return tval[0]
+
+        mock_time.time.side_effect = fake_time
         monitor_key_get.side_effect = monitor_key_side_effect
         monitor_key_exists.return_value = False
 
@@ -134,3 +145,4 @@ class UpgradeRollingTestCase(test_utils.CharmTestCase):
             [call('Previous node is: ip-192-168-1-2')],
             [call('ip-192-168-1-2 is not finished. Waiting')],
         )
+        self.assertEqual(tval[0], previous_node_start_time + 700)
