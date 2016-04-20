@@ -67,6 +67,7 @@ class TestCephOps(unittest.TestCase):
                                'op': 'delete-pool',
                                'name': 'foo',
                            }]})
+        mock_delete_pool.return_value = {'exit-code': 0}
         rc = ceph_broker.process_requests(reqs)
         mock_delete_pool.assert_called_with(service='admin', name='foo')
         self.assertEqual(json.loads(rc), {'exit-code': 0})
@@ -139,8 +140,8 @@ class TestCephOps(unittest.TestCase):
                                'name': 'foo',
                                'snapshot-name': 'foo-snap1',
                            }]})
+        mock_snapshot_pool.return_value = {'exit-code': 0}
         rc = ceph_broker.process_requests(reqs)
-        mock_snapshot_pool.return_value = 1
         mock_snapshot_pool.assert_called_with(service='admin',
                                               pool_name='foo',
                                               snapshot_name='foo-snap1')
@@ -155,6 +156,7 @@ class TestCephOps(unittest.TestCase):
                                'name': 'foo',
                                'new-name': 'foo2',
                            }]})
+        mock_rename_pool.return_value = {'exit-code': 0}
         rc = ceph_broker.process_requests(reqs)
         mock_rename_pool.assert_called_with(service='admin',
                                             old_name='foo',
@@ -170,6 +172,7 @@ class TestCephOps(unittest.TestCase):
                                'name': 'foo',
                                'snapshot-name': 'foo-snap1',
                            }]})
+        mock_snapshot_pool.return_value = {'exit-code': 0}
         rc = ceph_broker.process_requests(reqs)
         mock_snapshot_pool.assert_called_with(service='admin',
                                               pool_name='foo',
@@ -186,6 +189,7 @@ class TestCephOps(unittest.TestCase):
                                'key': 'size',
                                'value': 3,
                            }]})
+        mock_set_pool.return_value = {'exit-code': 0}
         rc = ceph_broker.process_requests(reqs)
         mock_set_pool.assert_called_with(service='admin',
                                          pool_name='foo',

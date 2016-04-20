@@ -4,16 +4,27 @@
 #
 import json
 
-from charmhelpers.contrib.storage.linux.ceph import validator, \
-    erasure_profile_exists, ErasurePool, set_pool_quota, \
-    pool_set, snapshot_pool, remove_pool_snapshot, create_erasure_profile, \
-    ReplicatedPool, rename_pool, Pool, get_osds, pool_exists, delete_pool
-
 from charmhelpers.core.hookenv import (
     log,
     DEBUG,
     INFO,
     ERROR,
+)
+from charmhelpers.contrib.storage.linux.ceph import (
+    create_erasure_profile,
+    delete_pool,
+    erasure_profile_exists,
+    get_osds,
+    pool_exists,
+    pool_set,
+    remove_pool_snapshot,
+    rename_pool,
+    set_pool_quota,
+    snapshot_pool,
+    validator,
+    ErasurePool,
+    Pool,
+    ReplicatedPool,
 )
 
 # This comes from http://docs.ceph.com/docs/master/rados/operations/pools/
@@ -89,6 +100,7 @@ def process_requests(reqs):
                 resp['request-id'] = request_id
 
             return resp
+
     except Exception as exc:
         log(str(exc), level=ERROR)
         msg = ("Unexpected error occurred while processing requests: %s" %
@@ -141,16 +153,16 @@ def handle_erasure_pool(request, service):
     # TODO: Default to 3/2 erasure coding. I believe this requires min 5 osds
     if not erasure_profile_exists(service=service, name=erasure_profile):
         # TODO: Fail and tell them to create the profile or default
-        msg = "erasure-profile {} does not exist.  Please create it with: " \
-              "create-erasure-profile".format(erasure_profile)
+        msg = ("erasure-profile {} does not exist.  Please create it with: "
+               "create-erasure-profile".format(erasure_profile))
         log(msg, level=ERROR)
         return {'exit-code': 1, 'stderr': msg}
-        pass
+
     pool = ErasurePool(service=service, name=pool_name,
                        erasure_code_profile=erasure_profile)
     # Ok make the erasure pool
     if not pool_exists(service=service, name=pool_name):
-        log("Creating pool '%s' (erasure_profile=%s)" % (pool,
+        log("Creating pool '%s' (erasure_profile=%s)" % (pool.name,
                                                          erasure_profile),
             level=INFO)
         pool.create()
@@ -184,11 +196,11 @@ def handle_replicated_pool(request, service):
                           replicas=replicas,
                           pg_num=pg_num)
     if not pool_exists(service=service, name=pool_name):
-        log("Creating pool '%s' (replicas=%s)" % (pool, replicas),
+        log("Creating pool '%s' (replicas=%s)" % (pool.name, replicas),
             level=INFO)
         pool.create()
     else:
-        log("Pool '%s' already exists - skipping create" % pool,
+        log("Pool '%s' already exists - skipping create" % pool.name,
             level=DEBUG)
 
     # Set a quota if requested
@@ -208,10 +220,11 @@ def handle_create_cache_tier(request, service):
     # cache and storage pool must exist first
     if not pool_exists(service=service, name=storage_pool) or not pool_exists(
             service=service, name=cache_pool):
-        msg = "cold-pool: {} and hot-pool: {} must exist. Please create " \
-              "them first".format(storage_pool, cache_pool)
+        msg = ("cold-pool: {} and hot-pool: {} must exist. Please create "
+               "them first".format(storage_pool, cache_pool))
         log(msg, level=ERROR)
         return {'exit-code': 1, 'stderr': msg}
+
     p = Pool(service=service, name=storage_pool)
     p.add_cache_tier(cache_pool=cache_pool, mode=cache_mode)
 
@@ -222,8 +235,8 @@ def handle_remove_cache_tier(request, service):
     # cache and storage pool must exist first
     if not pool_exists(service=service, name=storage_pool) or not pool_exists(
             service=service, name=cache_pool):
-        msg = "cold-pool: {} or hot-pool: {} doesn't exist. Not " \
-              "deleting cache tier".format(storage_pool, cache_pool)
+        msg = ("cold-pool: {} or hot-pool: {} doesn't exist. Not "
+               "deleting cache tier".format(storage_pool, cache_pool))
         log(msg, level=ERROR)
         return {'exit-code': 1, 'stderr': msg}
 
@@ -249,6 +262,7 @@ def handle_set_pool_value(request, service):
     else:
         # Validate that what the user passed is actually legal per Ceph's rules
         validator(params['value'], validator_params[0], validator_params[1])
+
     # Set the value
     pool_set(service=service, pool_name=params['pool'], key=params['key'],
              value=params['value'])
@@ -263,6 +277,7 @@ def process_requests_v1(reqs):
     Returns a response dict containing the exit code (non-zero if any
     operation failed along with an explanation).
     """
+    ret = None
     log("Processing %s ceph broker requests" % (len(reqs)), level=INFO)
     for req in reqs:
         op = req.get('op')
@@ -275,37 +290,42 @@ def process_requests_v1(reqs):
 
             # Default to replicated if pool_type isn't given
             if pool_type == 'erasure':
-                handle_erasure_pool(request=req, service=svc)
+                ret = handle_erasure_pool(request=req, service=svc)
             else:
-                handle_replicated_pool(request=req, service=svc)
+                ret = handle_replicated_pool(request=req, service=svc)
+
         elif op == "create-cache-tier":
-            handle_create_cache_tier(request=req, service=svc)
+            ret = handle_create_cache_tier(request=req, service=svc)
         elif op == "remove-cache-tier":
-            handle_remove_cache_tier(request=req, service=svc)
+            ret = handle_remove_cache_tier(request=req, service=svc)
         elif op == "create-erasure-profile":
-            handle_create_erasure_profile(request=req, service=svc)
+            ret = handle_create_erasure_profile(request=req, service=svc)
         elif op == "delete-pool":
             pool = req.get('name')
-            delete_pool(service=svc, name=pool)
+            ret = delete_pool(service=svc, name=pool)
         elif op == "rename-pool":
             old_name = req.get('name')
             new_name = req.get('new-name')
-            rename_pool(service=svc, old_name=old_name, new_name=new_name)
+            ret = rename_pool(service=svc, old_name=old_name,
+                              new_name=new_name)
         elif op == "snapshot-pool":
             pool = req.get('name')
             snapshot_name = req.get('snapshot-name')
-            snapshot_pool(service=svc, pool_name=pool,
-                          snapshot_name=snapshot_name)
+            ret = snapshot_pool(service=svc, pool_name=pool,
+                                snapshot_name=snapshot_name)
         elif op == "remove-pool-snapshot":
             pool = req.get('name')
             snapshot_name = req.get('snapshot-name')
-            remove_pool_snapshot(service=svc, pool_name=pool,
-                                 snapshot_name=snapshot_name)
+            ret = remove_pool_snapshot(service=svc, pool_name=pool,
+                                       snapshot_name=snapshot_name)
         elif op == "set-pool-value":
-            handle_set_pool_value(request=req, service=svc)
+            ret = handle_set_pool_value(request=req, service=svc)
         else:
             msg = "Unknown operation '%s'" % op
             log(msg, level=ERROR)
             return {'exit-code': 1, 'stderr': msg}
+
+    if type(ret) == dict and 'exit-code' in ret:
+        return ret
 
     return {'exit-code': 0}
