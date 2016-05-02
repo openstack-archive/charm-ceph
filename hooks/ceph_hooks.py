@@ -62,10 +62,11 @@ from charmhelpers.contrib.network.ip import (
 from charmhelpers.core.sysctl import create as create_sysctl
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.storage.linux.ceph import (
+    CephConfContext,
     monitor_key_set,
     monitor_key_exists,
     monitor_key_get,
-    get_mon_map
+    get_mon_map,
 )
 from utils import (
     get_networks,
@@ -303,7 +304,7 @@ def use_short_objects():
     return False
 
 
-def emit_cephconf():
+def get_ceph_context():
     networks = get_networks('ceph-public-network')
     public_network = ', '.join(networks)
 
@@ -334,12 +335,20 @@ def emit_cephconf():
         cephcontext['public_addr'] = get_public_addr()
         cephcontext['cluster_addr'] = get_cluster_addr()
 
+    # NOTE(dosaboy): these sections must correspond to what is supported in the
+    #                config template.
+    sections = ['general', 'mds', 'osd', 'mon']
+    cephcontext.update(CephConfContext(permitted_sections=sections)())
+    return cephcontext
+
+
+def emit_cephconf():
     # Install ceph.conf as an alternative to support
     # co-existence with other charms that write this file
     charm_ceph_conf = "/var/lib/charm/{}/ceph.conf".format(service_name())
     mkdir(os.path.dirname(charm_ceph_conf), owner=ceph.ceph_user(),
           group=ceph.ceph_user())
-    render('ceph.conf', charm_ceph_conf, cephcontext, perms=0o644)
+    render('ceph.conf', charm_ceph_conf, get_ceph_context(), perms=0o644)
     install_alternative('ceph.conf', '/etc/ceph/ceph.conf',
                         charm_ceph_conf, 100)
 
