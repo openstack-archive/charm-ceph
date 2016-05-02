@@ -11,6 +11,25 @@ options:
       .
       This configuration element is mandatory and the service will fail on
       install if it is not provided.
+  config-flags:
+    type: string
+    default:
+    description: |
+        User provided Ceph configuration. Supports a string representation of
+        a python dictionary where each top-level key represents a section in
+        the ceph.conf template. You may only use sections supported in the
+        template.
+        .
+        WARNING: this is not the recommended way to configure the underlying
+        services that this charm installs and is used at the user's own risk.
+        This option is mainly provided as a stop-gap for users that either
+        want to test the effect of modifying some config or who have found
+        a critical bug in the way the charm has configured their services
+        and need it fixed immediately. We ask that whenever this is used,
+        that the user consider opening a bug on this charm at
+        http://bugs.launchpad.net/charms providing an explanation of why the
+        config was needed so that we may consider it for inclusion as a
+        natively supported config in the the charm.
   auth-supported:
     type: string
     default: cephx
