@@ -285,6 +285,24 @@ def install():
     install_upstart_scripts()
 
 
+def use_short_objects():
+    '''
+    Determine whether OSD's should be configured with
+    limited object name lengths.
+
+    @return: boolean indicating whether OSD's should be limited
+    '''
+    if cmp_pkgrevno('ceph', "10.2.0") >= 0:
+        if config('osd-format') in ('ext4'):
+            return True
+        for device in config('osd-devices'):
+            if not device.startswith('/dev'):
+                # TODO: determine format of directory based
+                #       OSD location
+                return True
+    return False
+
+
 def emit_cephconf():
     networks = get_networks('ceph-public-network')
     public_network = ', '.join(networks)
@@ -303,6 +321,7 @@ def emit_cephconf():
         'ceph_cluster_network': cluster_network,
         'loglevel': config('loglevel'),
         'dio': str(config('use-direct-io')).lower(),
+        'short_object_len': use_short_objects(),
     }
 
     if config('prefer-ipv6'):
