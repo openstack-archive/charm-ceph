@@ -1,0 +1,10 @@
+Code-Review+1: Adriano <dritec@gmail.com>
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Liam Young <liam.young@canonical.com>
+Workflow+1: Liam Young <liam.young@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 20 May 2016 09:25:16 +0000
+Reviewed-on: https://review.openstack.org/318612
+Project: openstack/charm-ceph
+Branch: refs/heads/stable/16.04
