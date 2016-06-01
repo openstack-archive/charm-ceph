@@ -337,7 +337,7 @@ def get_ceph_context():
 
     # NOTE(dosaboy): these sections must correspond to what is supported in the
     #                config template.
-    sections = ['general', 'mds', 'osd', 'mon']
+    sections = ['global', 'mds', 'osd', 'mon']
     cephcontext.update(CephConfContext(permitted_sections=sections)())
     return cephcontext
 
