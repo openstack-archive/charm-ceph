@@ -8,10 +8,8 @@
 #  James Page <james.page@ubuntu.com>
 #
 
-import glob
 import os
 import random
-import shutil
 import socket
 import subprocess
 import sys
@@ -269,13 +267,6 @@ def upgrade_monitor():
         sys.exit(1)
 
 
-def install_upstart_scripts():
-    # Only install upstart configurations for older versions
-    if cmp_pkgrevno('ceph', "0.55.1") < 0:
-        for x in glob.glob('files/upstart/*.conf'):
-            shutil.copy(x, '/etc/init/')
-
-
 @hooks.hook('install.real')
 @harden()
 def install():
@@ -283,7 +274,6 @@ def install():
     add_source(config('source'), config('key'))
     apt_update(fatal=True)
     apt_install(packages=ceph.PACKAGES, fatal=True)
-    install_upstart_scripts()
 
 
 def use_short_objects():
@@ -648,7 +638,6 @@ def client_relation_changed():
 def upgrade_charm():
     emit_cephconf()
     apt_install(packages=filter_installed_packages(ceph.PACKAGES), fatal=True)
-    install_upstart_scripts()
     ceph.update_monfs()
     upgrade_keys()
     mon_relation_joined()
