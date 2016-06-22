@@ -6,3 +6,4 @@ bin
 *.sw[nop]
 .idea
 *.pyc
+.unit-state.db

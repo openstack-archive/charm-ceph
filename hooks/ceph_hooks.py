@@ -1,17 +1,21 @@
 #!/usr/bin/python
+#
+# Copyright 2016 Canonical Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-#
-# Copyright 2012 Canonical Ltd.
-#
-# Authors:
-#  Paul Collins <paul.collins@canonical.com>
-#  James Page <james.page@ubuntu.com>
-#
-
-import glob
 import os
 import random
-import shutil
 import socket
 import subprocess
 import sys
@@ -269,13 +273,6 @@ def upgrade_monitor():
         sys.exit(1)
 
 
-def install_upstart_scripts():
-    # Only install upstart configurations for older versions
-    if cmp_pkgrevno('ceph', "0.55.1") < 0:
-        for x in glob.glob('files/upstart/*.conf'):
-            shutil.copy(x, '/etc/init/')
-
-
 @hooks.hook('install.real')
 @harden()
 def install():
@@ -283,7 +280,6 @@ def install():
     add_source(config('source'), config('key'))
     apt_update(fatal=True)
     apt_install(packages=ceph.PACKAGES, fatal=True)
-    install_upstart_scripts()
 
 
 def use_short_objects():
@@ -648,7 +644,6 @@ def client_relation_changed():
 def upgrade_charm():
     emit_cephconf()
     apt_install(packages=filter_installed_packages(ceph.PACKAGES), fatal=True)
-    install_upstart_scripts()
     ceph.update_monfs()
     upgrade_keys()
     mon_relation_joined()
