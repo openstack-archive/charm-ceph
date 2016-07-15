@@ -349,6 +349,10 @@ osd_upgrade_caps = {
             'allow command "config-key put"',
             'allow command "config-key get"',
             'allow command "config-key exists"',
+            'allow command "osd out"',
+            'allow command "osd in"',
+            'allow command "osd rm"',
+            'allow command "auth del"',
             ]
 }
 

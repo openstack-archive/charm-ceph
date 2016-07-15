@@ -36,14 +36,17 @@ class PauseTestCase(CharmTestCase):
     def setUp(self):
         super(PauseTestCase, self).setUp(
             actions, ["check_call",
+                      "ceph_user",
                       "get_local_osd_ids",
                       "set_unit_paused",
                       "assess_status"])
 
     def test_pauses_services(self):
         self.get_local_osd_ids.return_value = [5]
+        self.ceph_user.return_value = "ceph"
         actions.pause([])
-        cmd = ['ceph', 'osd', 'out', '5']
+        cmd = ['sudo', '-u', 'ceph', 'ceph', '--id',
+               'osd-upgrade', 'osd', 'out', '5']
         self.check_call.assert_called_once_with(cmd)
         self.set_unit_paused.assert_called_once_with()
         self.assess_status.assert_called_once_with()
@@ -54,14 +57,17 @@ class ResumeTestCase(CharmTestCase):
     def setUp(self):
         super(ResumeTestCase, self).setUp(
             actions, ["check_call",
+                      "ceph_user",
                       "get_local_osd_ids",
                       "clear_unit_paused",
                       "assess_status"])
 
     def test_pauses_services(self):
         self.get_local_osd_ids.return_value = [5]
+        self.ceph_user.return_value = "ceph"
         actions.resume([])
-        cmd = ['ceph', 'osd', 'in', '5']
+        cmd = ['sudo', '-u', 'ceph', 'ceph', '--id',
+               'osd-upgrade', 'osd', 'in', '5']
         self.check_call.assert_called_once_with(cmd)
         self.clear_unit_paused.assert_called_once_with()
         self.assess_status.assert_called_once_with()
