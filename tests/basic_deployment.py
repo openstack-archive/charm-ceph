@@ -124,16 +124,16 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
     def _initialize_tests(self):
         """Perform final initialization before tests get run."""
         # Access the sentries for inspecting service units
-        self.mysql_sentry = self.d.sentry.unit['mysql/0']
-        self.keystone_sentry = self.d.sentry.unit['keystone/0']
-        self.rabbitmq_sentry = self.d.sentry.unit['rabbitmq-server/0']
-        self.nova_sentry = self.d.sentry.unit['nova-compute/0']
-        self.glance_sentry = self.d.sentry.unit['glance/0']
-        self.cinder_sentry = self.d.sentry.unit['cinder/0']
-        self.ceph0_sentry = self.d.sentry.unit['ceph/0']
-        self.ceph1_sentry = self.d.sentry.unit['ceph/1']
-        self.ceph2_sentry = self.d.sentry.unit['ceph/2']
-        self.ceph_osd_sentry = self.d.sentry.unit['ceph-osd/0']
+        self.mysql_sentry = self.d.sentry['mysql'][0]
+        self.keystone_sentry = self.d.sentry['keystone'][0]
+        self.rabbitmq_sentry = self.d.sentry['rabbitmq-server'][0]
+        self.nova_sentry = self.d.sentry['nova-compute'][0]
+        self.glance_sentry = self.d.sentry['glance'][0]
+        self.cinder_sentry = self.d.sentry['cinder'][0]
+        self.ceph0_sentry = self.d.sentry['ceph'][0]
+        self.ceph1_sentry = self.d.sentry['ceph'][1]
+        self.ceph2_sentry = self.d.sentry['ceph'][2]
+        self.ceph_osd_sentry = self.d.sentry['ceph-osd'][0]
         u.log.debug('openstack release val: {}'.format(
             self._get_openstack_release()))
         u.log.debug('openstack release str: {}'.format(
