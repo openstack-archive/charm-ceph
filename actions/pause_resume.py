@@ -46,7 +46,10 @@ def pause(args):
     @raises OSError if it can't get the local osd ids.
     """
     for local_id in get_local_osd_ids():
-        cmd = ['ceph', 'osd', 'out', str(local_id)]
+        cmd = [
+            'ceph',
+            '--id', 'osd-upgrade',
+            'osd', 'out', str(local_id)]
         check_call(cmd)
     set_unit_paused()
     assess_status()
@@ -59,7 +62,10 @@ def resume(args):
     @raises OSError if the unit can't get the local osd ids
     """
     for local_id in get_local_osd_ids():
-        cmd = ['ceph', 'osd', 'in', str(local_id)]
+        cmd = [
+            'ceph',
+            '--id', 'osd-upgrade',
+            'osd', 'in', str(local_id)]
         check_call(cmd)
     clear_unit_paused()
     assess_status()
