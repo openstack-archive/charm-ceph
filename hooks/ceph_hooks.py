@@ -21,7 +21,12 @@ import subprocess
 import sys
 import time
 
-import ceph
+sys.path.append('lib')
+from ceph.ceph import ceph
+from ceph.ceph.ceph_broker import (
+    process_requests
+)
+
 from charmhelpers.core import host
 from charmhelpers.core import hookenv
 from charmhelpers.core.hookenv import (
@@ -79,9 +84,7 @@ from utils import (
     is_unit_paused_set,
     get_cluster_addr,
 )
-from ceph_broker import (
-    process_requests
-)
+
 from charmhelpers.contrib.charmsupport import nrpe
 from charmhelpers.contrib.hardening.harden import harden
 

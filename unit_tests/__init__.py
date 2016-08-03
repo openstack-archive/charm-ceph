@@ -14,4 +14,5 @@
 
 import sys
 sys.path.append('hooks')
+sys.path.append('lib')
 sys.path.append('actions')

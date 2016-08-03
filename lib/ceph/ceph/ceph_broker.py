@@ -22,7 +22,7 @@ from charmhelpers.core.hookenv import (
     INFO,
     ERROR,
 )
-from charmhelpers.contrib.storage.linux.ceph import (
+from charmhelpers.contrib.storage.linux.ceph  import (
     create_erasure_profile,
     delete_pool,
     erasure_profile_exists,
@@ -152,6 +152,7 @@ def handle_erasure_pool(request, service):
     pool_name = request.get('name')
     erasure_profile = request.get('erasure-profile')
     quota = request.get('max-bytes')
+    weight = request.get('weight')
 
     if erasure_profile is None:
         erasure_profile = "default-canonical"
@@ -171,7 +172,8 @@ def handle_erasure_pool(request, service):
         return {'exit-code': 1, 'stderr': msg}
 
     pool = ErasurePool(service=service, name=pool_name,
-                       erasure_code_profile=erasure_profile)
+                       erasure_code_profile=erasure_profile,
+                       percent_data=weight)
     # Ok make the erasure pool
     if not pool_exists(service=service, name=pool_name):
         log("Creating pool '%s' (erasure_profile=%s)" % (pool.name,
@@ -188,7 +190,8 @@ def handle_replicated_pool(request, service):
     pool_name = request.get('name')
     replicas = request.get('replicas')
     quota = request.get('max-bytes')
-
+    weight = request.get('weight')
+   
     # Optional params
     pg_num = request.get('pg_num')
     if pg_num:
@@ -203,10 +206,16 @@ def handle_replicated_pool(request, service):
         log(msg, level=ERROR)
         return {'exit-code': 1, 'stderr': msg}
 
+    kwargs = {}
+    if pg_num:
+        kwargs['pg_num'] = pg_num
+    if weight:
+        kwargs['percent_data'] = weight
+    if replicas:
+        kwargs['replicas'] = replicas
+
     pool = ReplicatedPool(service=service,
-                          name=pool_name,
-                          replicas=replicas,
-                          pg_num=pg_num)
+                          name=pool_name, **kwargs)
     if not pool_exists(service=service, name=pool_name):
         log("Creating pool '%s' (replicas=%s)" % (pool.name, replicas),
             level=INFO)

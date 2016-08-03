@@ -21,12 +21,13 @@ import sys
 from subprocess import check_call
 
 sys.path.append('hooks')
+sys.path.append('lib')
 
 from charmhelpers.core.hookenv import (
     action_fail,
 )
 
-from ceph import get_local_osd_ids
+from ceph.ceph.ceph import get_local_osd_ids
 from ceph_hooks import assess_status
 
 from utils import (

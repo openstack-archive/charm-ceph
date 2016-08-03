@@ -20,7 +20,7 @@ from mock import (
     patch,
 )
 
-from hooks import ceph_broker
+from ceph.ceph import ceph_broker
 
 
 class TestCephOps(unittest.TestCase):
@@ -47,15 +47,12 @@ class TestCephOps(unittest.TestCase):
                                                erasure_plugin_name='jerasure')
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
-    @patch.object(ceph_broker, 'get_osds')
     @patch.object(ceph_broker, 'pool_exists')
     @patch.object(ceph_broker, 'ReplicatedPool')
     @patch.object(ceph_broker, 'log', lambda *args, **kwargs: None)
     def test_process_requests_create_replicated_pool(self,
                                                      mock_replicated_pool,
-                                                     mock_pool_exists,
-                                                     mock_get_osds):
-        mock_get_osds.return_value = 0
+                                                     mock_pool_exists):
         mock_pool_exists.return_value = False
         reqs = json.dumps({'api-version': 1,
                            'ops': [{
@@ -66,7 +63,29 @@ class TestCephOps(unittest.TestCase):
                            }]})
         rc = ceph_broker.process_requests(reqs)
         mock_pool_exists.assert_called_with(service='admin', name='foo')
-        calls = [call(pg_num=None, name=u'foo', service='admin', replicas=3)]
+        calls = [call(name=u'foo', service='admin', replicas=3)]
+        mock_replicated_pool.assert_has_calls(calls)
+        self.assertEqual(json.loads(rc), {'exit-code': 0})
+
+    @patch.object(ceph_broker, 'pool_exists')
+    @patch.object(ceph_broker, 'ReplicatedPool')
+    @patch.object(ceph_broker, 'log', lambda *args, **kwargs: None)
+    def test_process_requests_replicated_pool_weight(self,
+                                                     mock_replicated_pool,
+                                                     mock_pool_exists):
+        mock_pool_exists.return_value = False
+        reqs = json.dumps({'api-version': 1,
+                           'ops': [{
+                               'op': 'create-pool',
+                               'pool-type': 'replicated',
+                               'name': 'foo',
+                               'weight': 40.0,
+                               'replicas': 3
+                           }]})
+        rc = ceph_broker.process_requests(reqs)
+        mock_pool_exists.assert_called_with(service='admin', name='foo')
+        calls = [call(name=u'foo', service='admin', replicas=3,
+                      percent_data=40.0)]
         mock_replicated_pool.assert_has_calls(calls)
         self.assertEqual(json.loads(rc), {'exit-code': 0})
 
@@ -220,7 +239,3 @@ class TestCephOps(unittest.TestCase):
                            }]})
         rc = ceph_broker.process_requests(reqs)
         self.assertEqual(json.loads(rc)['exit-code'], 1)
-
-
-if __name__ == '__main__':
-    unittest.main()
