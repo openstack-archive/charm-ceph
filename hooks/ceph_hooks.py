@@ -54,7 +54,8 @@ from charmhelpers.core.host import (
     write_file,
     rsync,
     cmp_pkgrevno,
-    service_stop, service_start
+    service_stop, service_start,
+    chownr,
 )
 from charmhelpers.fetch import (
     apt_install,
@@ -263,6 +264,12 @@ def upgrade_monitor():
         else:
             service_stop('ceph-mon-all')
         apt_install(packages=ceph.PACKAGES, fatal=True)
+
+        # Ensure the ownership of Ceph's directories is correct
+        chownr(path=os.path.join(os.sep, "var", "lib", "ceph"),
+               owner=ceph.ceph_user(),
+               group=ceph.ceph_user())
+
         if ceph.systemd():
             for mon_id in ceph.get_local_mon_ids():
                 service_start('ceph-mon@{}'.format(mon_id))
