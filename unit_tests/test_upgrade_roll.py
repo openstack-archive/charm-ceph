@@ -38,6 +38,7 @@ TO_PATCH = [
     'service_stop',
     'service_start',
     'host',
+    'chownr',
 ]
 
 
@@ -90,14 +91,25 @@ class UpgradeRollingTestCase(test_utils.CharmTestCase):
     def test_upgrade_monitor(self):
         self.config.side_effect = config_side_effect
         self.ceph.get_version.return_value = "0.80"
+        self.ceph.ceph_user.return_value = "ceph"
         self.ceph.systemd.return_value = False
         ceph_hooks.upgrade_monitor()
-        self.service_stop.assert_called_with('ceph-mon-all')
-        self.service_start.assert_called_with('ceph-mon-all')
+        self.service_stop.assert_has_calls([
+            call('ceph-mon-all'),
+            call('ceph-osd-all'),
+        ])
+        self.service_start.assert_has_calls([
+            call('ceph-mon-all'),
+            call('ceph-osd-all'),
+        ])
         self.status_set.assert_has_calls([
             call('maintenance', 'Upgrading monitor'),
-            call('active', '')
         ])
+        self.chownr.assert_has_calls(
+            [
+                call(group='ceph', owner='ceph', path='/var/lib/ceph')
+            ]
+        )
 
     @patch('ceph_hooks.lock_and_roll')
     @patch('ceph_hooks.wait_on_previous_node')

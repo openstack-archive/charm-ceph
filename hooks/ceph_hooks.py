@@ -49,7 +49,8 @@ from charmhelpers.core.host import (
     write_file,
     rsync,
     cmp_pkgrevno,
-    service_stop, service_start
+    service_stop, service_start,
+    chownr,
 )
 from charmhelpers.fetch import (
     apt_install,
@@ -257,15 +258,28 @@ def upgrade_monitor():
         if ceph.systemd():
             for mon_id in ceph.get_local_mon_ids():
                 service_stop('ceph-mon@{}'.format(mon_id))
+            for osd_id in ceph.get_local_osd_ids():
+                service_stop('ceph-osd@{}'.format(osd_id))
         else:
             service_stop('ceph-mon-all')
+            service_stop('ceph-osd-all')
+
         apt_install(packages=ceph.PACKAGES, fatal=True)
+
+        # Ensure the ownership of Ceph's directories is correct
+        chownr(path=os.path.join(os.sep, "var", "lib", "ceph"),
+               owner=ceph.ceph_user(),
+               group=ceph.ceph_user())
+
         if ceph.systemd():
             for mon_id in ceph.get_local_mon_ids():
                 service_start('ceph-mon@{}'.format(mon_id))
+            for osd_id in ceph.get_local_osd_ids():
+                service_start('ceph-osd@{}'.format(osd_id))
         else:
             service_start('ceph-mon-all')
-        status_set("active", "")
+            service_start('ceph-osd-all')
+
     except subprocess.CalledProcessError as err:
         log("Stopping ceph and upgrading packages failed "
             "with message: {}".format(err.message))
