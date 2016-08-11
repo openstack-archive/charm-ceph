@@ -22,8 +22,8 @@ import sys
 import time
 
 sys.path.append('lib')
-from ceph.ceph import ceph
-from ceph.ceph.ceph_broker import (
+import ceph
+from ceph.ceph_broker import (
     process_requests
 )
 
