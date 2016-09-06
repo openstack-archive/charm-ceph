@@ -13,6 +13,8 @@
 # limitations under the License.
 import ctypes
 import json
+import random
+import socket
 import subprocess
 import time
 import os
@@ -28,18 +30,22 @@ from charmhelpers.core.host import (
     chownr,
     service_restart,
     lsb_release,
-    cmp_pkgrevno, service_stop, mounts)
+    cmp_pkgrevno, service_stop, mounts, service_start)
 from charmhelpers.core.hookenv import (
     log,
     ERROR,
     cached,
     status_set,
-    WARNING, DEBUG)
+    WARNING, DEBUG, config)
 from charmhelpers.core.services import render_template
 from charmhelpers.fetch import (
-    apt_cache
-)
-
+    apt_cache,
+    add_source, apt_install, apt_update)
+from charmhelpers.contrib.storage.linux.ceph import (
+    monitor_key_set,
+    monitor_key_exists,
+    monitor_key_get,
+    get_mon_map)
 from charmhelpers.contrib.storage.linux.utils import (
     is_block_device,
     zap_disk,
@@ -47,7 +53,6 @@ from charmhelpers.contrib.storage.linux.utils import (
 from utils import (
     get_unit_hostname,
 )
-
 
 LEADER = 'leader'
 PEON = 'peon'
@@ -921,8 +926,10 @@ _upgrade_caps = {
 }
 
 
-def get_radosgw_key():
-    return get_named_key('radosgw.gateway', _radosgw_caps)
+def get_radosgw_key(pool_list):
+    return get_named_key(name='radosgw.gateway',
+                         caps=_radosgw_caps,
+                         pool_list=pool_list)
 
 
 _default_caps = {
@@ -931,7 +938,7 @@ _default_caps = {
 }
 
 admin_caps = {
-    'mds': ['allow'],
+    'mds': ['allow *'],
     'mon': ['allow *'],
     'osd': ['allow *']
 }
@@ -955,7 +962,14 @@ def get_upgrade_key():
     return get_named_key('upgrade-osd', _upgrade_caps)
 
 
-def get_named_key(name, caps=None):
+def get_named_key(name, caps=None, pool_list=None):
+    """
+    Retrieve a specific named cephx key
+    :param name: String Name of key to get.
+    :param pool_list:  The list of pools to give access to
+    :param caps:  dict of cephx capabilities
+    :return: Returns a cephx key
+    """
     caps = caps or _default_caps
     cmd = [
         "sudo",
@@ -971,10 +985,14 @@ def get_named_key(name, caps=None):
     ]
     # Add capabilities
     for subsystem, subcaps in caps.iteritems():
-        cmd.extend([
-            subsystem,
-            '; '.join(subcaps),
-        ])
+        if subsystem == 'osd':
+            if pool_list:
+                # This will output a string similar to:
+                # "pool=rgw pool=rbd pool=something"
+                pools = " ".join(['pool={0}'.format(i) for i in pool_list])
+                subcaps[0] = subcaps[0] + " " + pools
+        cmd.extend([subsystem, '; '.join(subcaps)])
+    log("Calling subprocess.check_output: {}".format(cmd), level=DEBUG)
     return parse_key(subprocess.check_output(cmd).strip())  # IGNORE:E1103
 
 
@@ -1181,3 +1199,306 @@ def get_running_osds():
         return result.split()
     except subprocess.CalledProcessError:
         return []
+
+
+def wait_for_all_monitors_to_upgrade(new_version, upgrade_key):
+    """
+    Fairly self explanatory name.  This function will wait
+    for all monitors in the cluster to upgrade or it will
+    return after a timeout period has expired.
+    :param new_version: str of the version to watch
+    :param upgrade_key: the cephx key name to use
+    """
+    done = False
+    start_time = time.time()
+    monitor_list = []
+
+    mon_map = get_mon_map('admin')
+    if mon_map['monmap']['mons']:
+        for mon in mon_map['monmap']['mons']:
+            monitor_list.append(mon['name'])
+    while not done:
+        try:
+            done = all(monitor_key_exists(upgrade_key, "{}_{}_{}_done".format(
+                "mon", mon, new_version
+            )) for mon in monitor_list)
+            current_time = time.time()
+            if current_time > (start_time + 10*60):
+                raise Exception
+            else:
+                # Wait 30 seconds and test again if all monitors are upgraded
+                time.sleep(30)
+        except subprocess.CalledProcessError:
+            raise
+
+
+# Edge cases:
+# 1. Previous node dies on upgrade, can we retry?
+def roll_monitor_cluster(new_version, upgrade_key):
+    """
+    This is tricky to get right so here's what we're going to do.
+    :param new_version: str of the version to upgrade to
+    :param upgrade_key: the cephx key name to use when upgrading
+    There's 2 possible cases: Either I'm first in line or not.
+    If I'm not first in line I'll wait a random time between 5-30 seconds
+    and test to see if the previous monitor is upgraded yet.
+    """
+    log('roll_monitor_cluster called with {}'.format(new_version))
+    my_name = socket.gethostname()
+    monitor_list = []
+    mon_map = get_mon_map('admin')
+    if mon_map['monmap']['mons']:
+        for mon in mon_map['monmap']['mons']:
+            monitor_list.append(mon['name'])
+    else:
+        status_set('blocked', 'Unable to get monitor cluster information')
+        sys.exit(1)
+    log('monitor_list: {}'.format(monitor_list))
+
+    # A sorted list of osd unit names
+    mon_sorted_list = sorted(monitor_list)
+
+    try:
+        position = mon_sorted_list.index(my_name)
+        log("upgrade position: {}".format(position))
+        if position == 0:
+            # I'm first!  Roll
+            # First set a key to inform others I'm about to roll
+            lock_and_roll(upgrade_key=upgrade_key,
+                          service='mon',
+                          my_name=my_name,
+                          version=new_version)
+        else:
+            # Check if the previous node has finished
+            status_set('blocked',
+                       'Waiting on {} to finish upgrading'.format(
+                           mon_sorted_list[position - 1]))
+            wait_on_previous_node(upgrade_key=upgrade_key,
+                                  service='mon',
+                                  previous_node=mon_sorted_list[position - 1],
+                                  version=new_version)
+            lock_and_roll(upgrade_key=upgrade_key,
+                          service='mon',
+                          my_name=my_name,
+                          version=new_version)
+    except ValueError:
+        log("Failed to find {} in list {}.".format(
+            my_name, mon_sorted_list))
+        status_set('blocked', 'failed to upgrade monitor')
+
+
+def upgrade_monitor():
+    current_version = get_version()
+    status_set("maintenance", "Upgrading monitor")
+    log("Current ceph version is {}".format(current_version))
+    new_version = config('release-version')
+    log("Upgrading to: {}".format(new_version))
+
+    try:
+        add_source(config('source'), config('key'))
+        apt_update(fatal=True)
+    except subprocess.CalledProcessError as err:
+        log("Adding the ceph source failed with message: {}".format(
+            err.message))
+        status_set("blocked", "Upgrade to {} failed".format(new_version))
+        sys.exit(1)
+    try:
+        if systemd():
+            for mon_id in get_local_mon_ids():
+                service_stop('ceph-mon@{}'.format(mon_id))
+        else:
+            service_stop('ceph-mon-all')
+        apt_install(packages=PACKAGES, fatal=True)
+
+        # Ensure the ownership of Ceph's directories is correct
+        chownr(path=os.path.join(os.sep, "var", "lib", "ceph"),
+               owner=ceph_user(),
+               group=ceph_user())
+        if systemd():
+            for mon_id in get_local_mon_ids():
+                service_start('ceph-mon@{}'.format(mon_id))
+        else:
+            service_start('ceph-mon-all')
+        status_set("active", "")
+    except subprocess.CalledProcessError as err:
+        log("Stopping ceph and upgrading packages failed "
+            "with message: {}".format(err.message))
+        status_set("blocked", "Upgrade to {} failed".format(new_version))
+        sys.exit(1)
+
+
+def lock_and_roll(upgrade_key, service, my_name, version):
+    start_timestamp = time.time()
+
+    log('monitor_key_set {}_{}_{}_start {}'.format(
+        service,
+        my_name,
+        version,
+        start_timestamp))
+    monitor_key_set(upgrade_key, "{}_{}_{}_start".format(
+        service, my_name, version), start_timestamp)
+    log("Rolling")
+
+    # This should be quick
+    if service == 'osd':
+        upgrade_osd()
+    elif service == 'mon':
+        upgrade_monitor()
+    else:
+        log("Unknown service {}.  Unable to upgrade".format(service),
+            level=ERROR)
+    log("Done")
+
+    stop_timestamp = time.time()
+    # Set a key to inform others I am finished
+    log('monitor_key_set {}_{}_{}_done {}'.format(service,
+                                                  my_name,
+                                                  version,
+                                                  stop_timestamp))
+    monitor_key_set(upgrade_key, "{}_{}_{}_done".format(service, my_name, version),
+                    stop_timestamp)
+
+
+def wait_on_previous_node(upgrade_key, service, previous_node, version):
+    log("Previous node is: {}".format(previous_node))
+
+    previous_node_finished = monitor_key_exists(
+        upgrade_key,
+        "{}_{}_{}_done".format(service, previous_node, version))
+
+    while previous_node_finished is False:
+        log("{} is not finished. Waiting".format(previous_node))
+        # Has this node been trying to upgrade for longer than
+        # 10 minutes?
+        # If so then move on and consider that node dead.
+
+        # NOTE: This assumes the clusters clocks are somewhat accurate
+        # If the hosts clock is really far off it may cause it to skip
+        # the previous node even though it shouldn't.
+        current_timestamp = time.time()
+        previous_node_start_time = monitor_key_get(
+            upgrade_key,
+            "{}_{}_{}_start".format(service, previous_node, version))
+        if (current_timestamp - (10 * 60)) > previous_node_start_time:
+            # Previous node is probably dead.  Lets move on
+            if previous_node_start_time is not None:
+                log(
+                    "Waited 10 mins on node {}. current time: {} > "
+                    "previous node start time: {} Moving on".format(
+                        previous_node,
+                        (current_timestamp - (10 * 60)),
+                        previous_node_start_time))
+                return
+        else:
+            # I have to wait.  Sleep a random amount of time and then
+            # check if I can lock,upgrade and roll.
+            wait_time = random.randrange(5, 30)
+            log('waiting for {} seconds'.format(wait_time))
+            time.sleep(wait_time)
+            previous_node_finished = monitor_key_exists(
+                upgrade_key,
+                "{}_{}_{}_done".format(service, previous_node, version))
+
+
+def get_upgrade_position(osd_sorted_list, match_name):
+    for index, item in enumerate(osd_sorted_list):
+        if item.name == match_name:
+            return index
+    return None
+
+
+# Edge cases:
+# 1. Previous node dies on upgrade, can we retry?
+# 2. This assumes that the osd failure domain is not set to osd.
+#    It rolls an entire server at a time.
+def roll_osd_cluster(new_version, upgrade_key):
+    """
+    This is tricky to get right so here's what we're going to do.
+    :param new_version: str of the version to upgrade to
+    :param upgrade_key: the cephx key name to use when upgrading
+    There's 2 possible cases: Either I'm first in line or not.
+    If I'm not first in line I'll wait a random time between 5-30 seconds
+    and test to see if the previous osd is upgraded yet.
+
+    TODO: If you're not in the same failure domain it's safe to upgrade
+     1. Examine all pools and adopt the most strict failure domain policy
+        Example: Pool 1: Failure domain = rack
+        Pool 2: Failure domain = host
+        Pool 3: Failure domain = row
+
+        outcome: Failure domain = host
+    """
+    log('roll_osd_cluster called with {}'.format(new_version))
+    my_name = socket.gethostname()
+    osd_tree = get_osd_tree(service=upgrade_key)
+    # A sorted list of osd unit names
+    osd_sorted_list = sorted(osd_tree)
+    log("osd_sorted_list: {}".format(osd_sorted_list))
+
+    try:
+        position = get_upgrade_position(osd_sorted_list, my_name)
+        log("upgrade position: {}".format(position))
+        if position == 0:
+            # I'm first!  Roll
+            # First set a key to inform others I'm about to roll
+            lock_and_roll(upgrade_key=upgrade_key,
+                          service='osd',
+                          my_name=my_name,
+                          version=new_version)
+        else:
+            # Check if the previous node has finished
+            status_set('blocked',
+                       'Waiting on {} to finish upgrading'.format(
+                           osd_sorted_list[position - 1].name))
+            wait_on_previous_node(
+                upgrade_key=upgrade_key,
+                service='osd',
+                previous_node=osd_sorted_list[position - 1].name,
+                version=new_version)
+            lock_and_roll(upgrade_key=upgrade_key,
+                          service='osd',
+                          my_name=my_name,
+                          version=new_version)
+    except ValueError:
+        log("Failed to find name {} in list {}".format(
+            my_name, osd_sorted_list))
+        status_set('blocked', 'failed to upgrade osd')
+
+
+def upgrade_osd():
+    current_version = get_version()
+    status_set("maintenance", "Upgrading osd")
+    log("Current ceph version is {}".format(current_version))
+    new_version = config('release-version')
+    log("Upgrading to: {}".format(new_version))
+
+    try:
+        add_source(config('source'), config('key'))
+        apt_update(fatal=True)
+    except subprocess.CalledProcessError as err:
+        log("Adding the ceph source failed with message: {}".format(
+            err.message))
+        status_set("blocked", "Upgrade to {} failed".format(new_version))
+        sys.exit(1)
+    try:
+        if systemd():
+            for osd_id in get_local_osd_ids():
+                service_stop('ceph-osd@{}'.format(osd_id))
+        else:
+            service_stop('ceph-osd-all')
+        apt_install(packages=PACKAGES, fatal=True)
+
+        # Ensure the ownership of Ceph's directories is correct
+        chownr(path=os.path.join(os.sep, "var", "lib", "ceph"),
+               owner=ceph_user(),
+               group=ceph_user())
+        if systemd():
+            for osd_id in get_local_osd_ids():
+                service_start('ceph-osd@{}'.format(osd_id))
+        else:
+            service_start('ceph-osd-all')
+    except subprocess.CalledProcessError as err:
+        log("Stopping ceph and upgrading packages failed "
+            "with message: {}".format(err.message))
+        status_set("blocked", "Upgrade to {} failed".format(new_version))
+        sys.exit(1)
