@@ -9,6 +9,11 @@ tags:
   - storage
   - file-servers
   - misc
+series:
+  - xenial
+  - trusty
+  - precise
+  - yakkety
 peers:
   mon:
     interface: ceph
