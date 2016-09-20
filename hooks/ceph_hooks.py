@@ -45,7 +45,8 @@ from charmhelpers.core.hookenv import (
     status_set,
     storage_get,
     storage_list,
-    local_unit
+    local_unit,
+    application_version_set,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -739,6 +740,7 @@ def assess_status():
         # If there's a pending lock for this unit,
         # can i get the lock?
         # reboot the ceph-mon process
+    application_version_set(ceph.get_version())
 
 
 @hooks.hook('update-status')
