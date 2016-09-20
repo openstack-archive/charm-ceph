@@ -45,7 +45,8 @@ from charmhelpers.core.hookenv import (
     status_set,
     storage_get,
     storage_list,
-    local_unit
+    local_unit,
+    application_version_set,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -61,7 +62,8 @@ from charmhelpers.fetch import (
     apt_install,
     apt_update,
     filter_installed_packages,
-    add_source
+    add_source,
+    get_upstream_version,
 )
 from charmhelpers.payload.execd import execd_preinstall
 from charmhelpers.contrib.openstack.alternatives import install_alternative
@@ -708,8 +710,12 @@ def update_nrpe_config():
     nrpe_setup.write()
 
 
+VERSION_PACKAGE = 'ceph-common'
+
+
 def assess_status():
     """Assess status of current unit"""
+    application_version_set(get_upstream_version(VERSION_PACKAGE))
     # check to see if the unit is paused.
     if is_unit_paused_set():
         status_set('maintenance',
