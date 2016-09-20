@@ -45,7 +45,8 @@ from charmhelpers.core.hookenv import (
     status_set,
     storage_get,
     storage_list,
-    local_unit
+    local_unit,
+    application_version_set,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -710,6 +711,7 @@ def update_nrpe_config():
 
 def assess_status():
     """Assess status of current unit"""
+    application_version_set(ceph.get_version())
     # check to see if the unit is paused.
     if is_unit_paused_set():
         status_set('maintenance',
