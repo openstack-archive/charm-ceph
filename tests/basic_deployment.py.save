@@ -59,15 +59,22 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
            compatible with the local charm (e.g. stable or next).
            """
         this_service = {'name': 'ceph', 'units': 3}
-        other_services = [
-            {'name': 'percona-cluster', 'constraints': {'mem': '3072M'}},
-            {'name': 'keystone'},
-            {'name': 'rabbitmq-server'},
-            {'name': 'nova-compute'},
-            {'name': 'glance'},
-            {'name': 'cinder'},
-            {'name': 'ceph-osd'}
-        ]
+        other_services = [{'name': 'percona-cluster'},
+                          {'name': 'keystone'},
+                          {'name': 'rabbitmq-server'},
+
+        pxc_config = {
+            'dataset-size': '25%',
+            'max-connections': 1000,
+            'root-password': 'ChangeMe123',
+            'sst-password': 'ChangeMe123',
+        }
+
+
+                          {'name': 'nova-compute'},
+                          {'name': 'glance'},
+                          {'name': 'cinder'},
+                          {'name': 'ceph-osd'}]
         super(CephBasicDeployment, self)._add_services(this_service,
                                                        other_services)
 
@@ -218,6 +225,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         """Verify the expected services are running on the service units."""
 
         services = {
+            self.pxc_sentry: ['mysql'],
             self.rabbitmq_sentry: ['rabbitmq-server'],
             self.nova_sentry: ['nova-compute'],
             self.keystone_sentry: ['keystone'],
