@@ -14,12 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Amulet tests on a basic ceph deployment on precise-icehouse."""
+"""Amulet tests on a basic ceph deployment on xenial-newton."""
 
 from basic_deployment import CephBasicDeployment
 
 if __name__ == '__main__':
-    deployment = CephBasicDeployment(series='precise',
-                                     openstack='cloud:precise-icehouse',
-                                     source='cloud:precise-updates/icehouse')
+    deployment = CephBasicDeployment(series='xenial',
+                                     openstack='cloud:xenial-newton',
+                                     source='cloud:xenial-updates/newton')
     deployment.run_tests()
