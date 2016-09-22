@@ -43,7 +43,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         self._deploy()
 
         u.log.info('Waiting on extended status checks...')
-        exclude_services = ['mysql']
+        exclude_services = []
 
         # Wait for deployment ready msgs, except exclusions
         self._auto_wait_for_status(exclude_services=exclude_services)
@@ -58,7 +58,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
            compatible with the local charm (e.g. stable or next).
            """
         this_service = {'name': 'ceph', 'units': 3}
-        other_services = [{'name': 'mysql'},
+        other_services = [{'name': 'percona-cluster'},
                           {'name': 'keystone'},
                           {'name': 'rabbitmq-server'},
                           {'name': 'nova-compute'},
@@ -71,16 +71,16 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
     def _add_relations(self):
         """Add all of the relations for the services."""
         relations = {
-            'nova-compute:shared-db': 'mysql:shared-db',
+            'nova-compute:shared-db': 'percona-cluster:shared-db',
             'nova-compute:amqp': 'rabbitmq-server:amqp',
             'nova-compute:image-service': 'glance:image-service',
             'nova-compute:ceph': 'ceph:client',
-            'keystone:shared-db': 'mysql:shared-db',
-            'glance:shared-db': 'mysql:shared-db',
+            'keystone:shared-db': 'percona-cluster:shared-db',
+            'glance:shared-db': 'percona-cluster:shared-db',
             'glance:identity-service': 'keystone:identity-service',
             'glance:amqp': 'rabbitmq-server:amqp',
             'glance:ceph': 'ceph:client',
-            'cinder:shared-db': 'mysql:shared-db',
+            'cinder:shared-db': 'percona-cluster:shared-db',
             'cinder:identity-service': 'keystone:identity-service',
             'cinder:amqp': 'rabbitmq-server:amqp',
             'cinder:image-service': 'glance:image-service',
@@ -93,7 +93,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         """Configure all of the services."""
         keystone_config = {'admin-password': 'openstack',
                            'admin-token': 'ubuntutesting'}
-        mysql_config = {'dataset-size': '50%'}
+        pxc_config = {'dataset-size': '50%'}
         cinder_config = {'block-device': 'None', 'glance-api-version': '2'}
 
         # Include a non-existent device as osd-devices is a whitelist,
@@ -115,7 +115,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         }
 
         configs = {'keystone': keystone_config,
-                   'mysql': mysql_config,
+                   'percona-cluster': pxc_config,
                    'cinder': cinder_config,
                    'ceph': ceph_config,
                    'ceph-osd': ceph_osd_config}
@@ -124,7 +124,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
     def _initialize_tests(self):
         """Perform final initialization before tests get run."""
         # Access the sentries for inspecting service units
-        self.mysql_sentry = self.d.sentry['mysql'][0]
+        self.pxc_sentry = self.d.sentry['percona-cluster'][0]
         self.keystone_sentry = self.d.sentry['keystone'][0]
         self.rabbitmq_sentry = self.d.sentry['rabbitmq-server'][0]
         self.nova_sentry = self.d.sentry['nova-compute'][0]
@@ -210,7 +210,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         """Verify the expected services are running on the service units."""
 
         services = {
-            self.mysql_sentry: ['mysql'],
+            self.pxc_sentry: ['mysql'],
             self.rabbitmq_sentry: ['rabbitmq-server'],
             self.nova_sentry: ['nova-compute'],
             self.keystone_sentry: ['keystone'],
