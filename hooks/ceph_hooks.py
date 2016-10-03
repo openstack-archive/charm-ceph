@@ -506,7 +506,7 @@ def client_relation_changed():
         log('mon cluster not in quorum', level=DEBUG)
 
 
-@hooks.hook('upgrade-charm')
+@hooks.hook('upgrade-charm.real')
 @harden()
 def upgrade_charm():
     emit_cephconf()
