@@ -19,7 +19,7 @@ bin/charm_helpers_sync.py:
 
 bin/git_sync.py:
 	@mkdir -p bin
-	@wget -O bin/git_sync.py https://raw.githubusercontent.com/ChrisMacNaughton/git-sync/master/git_sync.py
+	@wget -O bin/git_sync.py https://raw.githubusercontent.com/CanonicalLtd/git-sync/master/git_sync.py
 
 ch-sync: bin/charm_helpers_sync.py
 	$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers-hooks.yaml
