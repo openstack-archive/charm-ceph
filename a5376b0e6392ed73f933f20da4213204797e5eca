@@ -1,0 +1,8 @@
+Code-Review+2: Chris Holcombe <chris.holcombe@canonical.com>
+Workflow+1: Chris Holcombe <chris.holcombe@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 07 Oct 2016 15:24:01 +0000
+Reviewed-on: https://review.openstack.org/383779
+Project: openstack/charm-ceph
+Branch: refs/heads/master
