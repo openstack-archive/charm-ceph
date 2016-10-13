@@ -1,0 +1,8 @@
+Code-Review+2: David Ames <david.ames@canonical.com>
+Workflow+1: David Ames <david.ames@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 13 Oct 2016 19:07:23 +0000
+Reviewed-on: https://review.openstack.org/386152
+Project: openstack/charm-ceph
+Branch: refs/heads/stable/16.10
