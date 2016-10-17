@@ -38,6 +38,7 @@ storage:
     type: block
     multiple:
       range: 0-
+    minimum-size: 1G
   osd-journal:
     type: block
     multiple:
