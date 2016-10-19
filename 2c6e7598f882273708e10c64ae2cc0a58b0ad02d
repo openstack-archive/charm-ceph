@@ -1,0 +1,10 @@
+Code-Review+1: Rahul U Nair <rahulunair@gmail.com>
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Ryan Beisner <ryan.beisner@canonical.com>
+Workflow+1: Ryan Beisner <ryan.beisner@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 19 Oct 2016 03:35:22 +0000
+Reviewed-on: https://review.openstack.org/388054
+Project: openstack/charm-ceph
+Branch: refs/heads/stable/16.10
