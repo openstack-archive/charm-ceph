@@ -1,8 +1,8 @@
 #!/bin/bash
-# Wrapper to deal with newer Ubuntu versions that don't have py2 installed
-# by default.
+# Wrapper to ensure that python dependencies are installed before we get into
+# the python part of the hook execution
 
-declare -a DEPS=('apt' 'netaddr' 'netifaces' 'pip' 'yaml')
+declare -a DEPS=('dnspython' 'pyudev')
 
 check_and_install() {
     pkg="${1}-${2}"
@@ -16,6 +16,3 @@ PYTHON="python"
 for dep in ${DEPS[@]}; do
     check_and_install ${PYTHON} ${dep}
 done
-
-./hooks/install_deps
-exec ./hooks/install.real
