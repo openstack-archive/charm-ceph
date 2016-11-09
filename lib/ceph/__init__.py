@@ -23,6 +23,7 @@ import re
 import sys
 import errno
 import shutil
+import pyudev
 
 from charmhelpers.core import hookenv
 from charmhelpers.core.host import (
@@ -50,13 +51,15 @@ from charmhelpers.contrib.storage.linux.utils import (
     is_block_device,
     zap_disk,
     is_device_mounted)
+from charmhelpers.contrib.openstack.utils import (
+    get_os_codename_install_source)
 
 LEADER = 'leader'
 PEON = 'peon'
 QUORUM = [LEADER, PEON]
 
 PACKAGES = ['ceph', 'gdisk', 'ntp', 'btrfs-tools', 'python-ceph',
-            'radosgw', 'xfsprogs']
+            'radosgw', 'xfsprogs', 'python-pyudev']
 
 LinkSpeed = {
     "BASE_10": 10,
@@ -98,6 +101,23 @@ NETWORK_ADAPTER_SYSCTLS = {
         'net.ipv4.tcp_adv_win_scale': 1
     }
 }
+
+
+def unmounted_disks():
+    """List of unmounted block devices on the current host."""
+    disks = []
+    context = pyudev.Context()
+    for device in context.list_devices(DEVTYPE='disk'):
+        if device['SUBSYSTEM'] == 'block':
+            matched = False
+            for block_type in [u'dm', u'loop', u'ram', u'nbd']:
+                if block_type in device.device_node:
+                    matched = True
+            if matched:
+                continue
+            disks.append(device.device_node)
+    log("Found disks: {}".format(disks))
+    return [disk for disk in disks if not is_device_mounted(disk)]
 
 
 def save_sysctls(sysctl_dict, save_location):
@@ -1344,7 +1364,7 @@ def roll_monitor_cluster(new_version, upgrade_key):
                           version=new_version)
         else:
             # Check if the previous node has finished
-            status_set('blocked',
+            status_set('waiting',
                        'Waiting on {} to finish upgrading'.format(
                            mon_sorted_list[position - 1]))
             wait_on_previous_node(upgrade_key=upgrade_key,
@@ -1361,11 +1381,10 @@ def roll_monitor_cluster(new_version, upgrade_key):
         status_set('blocked', 'failed to upgrade monitor')
 
 
-def upgrade_monitor():
+def upgrade_monitor(new_version):
     current_version = get_version()
     status_set("maintenance", "Upgrading monitor")
     log("Current ceph version is {}".format(current_version))
-    new_version = config('release-version')
     log("Upgrading to: {}".format(new_version))
 
     try:
@@ -1393,7 +1412,6 @@ def upgrade_monitor():
                 service_start('ceph-mon@{}'.format(mon_id))
         else:
             service_start('ceph-mon-all')
-        status_set("active", "")
     except subprocess.CalledProcessError as err:
         log("Stopping ceph and upgrading packages failed "
             "with message: {}".format(err.message))
@@ -1415,9 +1433,9 @@ def lock_and_roll(upgrade_key, service, my_name, version):
 
     # This should be quick
     if service == 'osd':
-        upgrade_osd()
+        upgrade_osd(version)
     elif service == 'mon':
-        upgrade_monitor()
+        upgrade_monitor(version)
     else:
         log("Unknown service {}.  Unable to upgrade".format(service),
             level=ERROR)
@@ -1541,11 +1559,10 @@ def roll_osd_cluster(new_version, upgrade_key):
         status_set('blocked', 'failed to upgrade osd')
 
 
-def upgrade_osd():
+def upgrade_osd(new_version):
     current_version = get_version()
     status_set("maintenance", "Upgrading osd")
     log("Current ceph version is {}".format(current_version))
-    new_version = config('release-version')
     log("Upgrading to: {}".format(new_version))
 
     try:
@@ -1578,3 +1595,58 @@ def upgrade_osd():
             "with message: {}".format(err.message))
         status_set("blocked", "Upgrade to {} failed".format(new_version))
         sys.exit(1)
+
+
+def list_pools(service):
+    """
+    This will list the current pools that Ceph has
+
+    :param service: String service id to run under
+    :return: list.  Returns a list of the ceph pools. Raises CalledProcessError
+    if the subprocess fails to run.
+    """
+    try:
+        pool_list = []
+        pools = subprocess.check_output(['rados', '--id', service, 'lspools'])
+        for pool in pools.splitlines():
+            pool_list.append(pool)
+        return pool_list
+    except subprocess.CalledProcessError as err:
+        log("rados lspools failed with error: {}".format(err.output))
+        raise
+
+
+# A dict of valid ceph upgrade paths.  Mapping is old -> new
+UPGRADE_PATHS = {
+    'firefly': 'hammer',
+    'hammer': 'jewel',
+}
+
+# Map UCA codenames to ceph codenames
+UCA_CODENAME_MAP = {
+    'icehouse': 'firefly',
+    'juno': 'firefly',
+    'kilo': 'hammer',
+    'liberty': 'hammer',
+    'mitaka': 'jewel',
+}
+
+
+def pretty_print_upgrade_paths():
+    '''Pretty print supported upgrade paths for ceph'''
+    lines = []
+    for key, value in UPGRADE_PATHS.iteritems():
+        lines.append("{} -> {}".format(key, value))
+    return lines
+
+
+def resolve_ceph_version(source):
+    '''
+    Resolves a version of ceph based on source configuration
+    based on Ubuntu Cloud Archive pockets.
+
+    @param: source: source configuration option of charm
+    @returns: ceph release codename or None if not resolvable
+    '''
+    os_release = get_os_codename_install_source(source)
+    return UCA_CODENAME_MAP.get(os_release)
