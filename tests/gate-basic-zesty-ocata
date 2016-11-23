@@ -14,12 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Amulet tests on a basic ceph deployment on trusty-liberty."""
+"""Amulet tests on a basic ceph deployment on zesty-ocata."""
 
 from basic_deployment import CephBasicDeployment
 
 if __name__ == '__main__':
-    deployment = CephBasicDeployment(series='trusty',
-                                     openstack='cloud:trusty-liberty',
-                                     source='cloud:trusty-updates/liberty')
+    deployment = CephBasicDeployment(series='zesty')
     deployment.run_tests()
