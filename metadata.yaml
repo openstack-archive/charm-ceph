@@ -12,7 +12,6 @@ tags:
 series:
   - xenial
   - trusty
-  - precise
   - yakkety
 peers:
   mon:
