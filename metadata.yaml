@@ -11,8 +11,8 @@ tags:
   - misc
 series:
   - xenial
+  - zesty
   - trusty
-  - precise
   - yakkety
 peers:
   mon:
