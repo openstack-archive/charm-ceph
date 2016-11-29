@@ -532,7 +532,8 @@ def start():
 @hooks.hook('nrpe-external-master-relation-changed')
 def update_nrpe_config():
     # python-dbus is used by check_upstart_job
-    apt_install('python-dbus')
+    # lockfile-create is used by collect_ceph_status
+    apt_install(['python-dbus', 'lockfile-progs'])
     log('Refreshing nagios checks')
     if os.path.isdir(NAGIOS_PLUGINS):
         rsync(os.path.join(os.getenv('CHARM_DIR'), 'files', 'nagios',
