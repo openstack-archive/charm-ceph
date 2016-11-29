@@ -15,7 +15,7 @@
 import copy
 import unittest
 
-from mock import patch
+from mock import patch, DEFAULT
 
 import charmhelpers.contrib.storage.linux.ceph as ceph
 import ceph_hooks
@@ -33,8 +33,6 @@ CHARM_CONFIG = {'config-flags': '',
 
 
 class CephHooksTestCase(unittest.TestCase):
-    def setUp(self):
-        super(CephHooksTestCase, self).setUp()
 
     @patch.object(ceph_hooks, 'get_public_addr', lambda *args: "10.0.0.1")
     @patch.object(ceph_hooks, 'get_cluster_addr', lambda *args: "10.1.0.1")
@@ -125,3 +123,32 @@ class CephHooksTestCase(unittest.TestCase):
                     'short_object_len': True,
                     'use_syslog': 'true'}
         self.assertEqual(ctxt, expected)
+
+    def test_nrpe_dependency_installed(self):
+        with patch.multiple(ceph_hooks,
+                            apt_install=DEFAULT,
+                            rsync=DEFAULT,
+                            log=DEFAULT,
+                            write_file=DEFAULT,
+                            nrpe=DEFAULT) as mocks:
+            ceph_hooks.update_nrpe_config()
+        mocks["apt_install"].assert_called_once_with(
+            ["python-dbus", "lockfile-progs"])
+
+    def test_upgrade_charm_with_nrpe_relation_installs_dependencies(self):
+        with patch.multiple(
+                ceph_hooks,
+                apt_install=DEFAULT,
+                rsync=DEFAULT,
+                log=DEFAULT,
+                write_file=DEFAULT,
+                nrpe=DEFAULT,
+                emit_cephconf=DEFAULT,
+                upgrade_keys=DEFAULT,
+                mon_relation_joined=DEFAULT,
+                is_relation_made=DEFAULT) as mocks, patch(
+                    "charmhelpers.contrib.hardening.harden.config"):
+            mocks["is_relation_made"].return_value = True
+            ceph_hooks.upgrade_charm()
+        mocks["apt_install"].assert_called_with(
+            ["python-dbus", "lockfile-progs"])
