@@ -1,0 +1,8 @@
+Code-Review+2: Chris MacNaughton <chris.macnaughton@canonical.com>
+Workflow+1: Chris MacNaughton <chris.macnaughton@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 29 Nov 2016 17:14:38 +0000
+Reviewed-on: https://review.openstack.org/404346
+Project: openstack/charm-ceph
+Branch: refs/heads/stable/16.10
