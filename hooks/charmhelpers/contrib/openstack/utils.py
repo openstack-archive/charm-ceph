@@ -549,9 +549,9 @@ def configure_installation_source(rel):
             'newton': 'xenial-updates/newton',
             'newton/updates': 'xenial-updates/newton',
             'newton/proposed': 'xenial-proposed/newton',
-            'zesty': 'zesty-updates/ocata',
-            'zesty/updates': 'xenial-updates/ocata',
-            'zesty/proposed': 'xenial-proposed/ocata',
+            'ocata': 'xenial-updates/ocata',
+            'ocata/updates': 'xenial-updates/ocata',
+            'ocata/proposed': 'xenial-proposed/ocata',
         }
 
         try:
@@ -1925,3 +1925,28 @@ def os_application_version_set(package):
         application_version_set(os_release(package))
     else:
         application_version_set(application_version)
+
+
+def enable_memcache(source=None, release=None):
+    """Determine if memcache should be enabled on the local unit
+
+    @param source: source string for charm
+    @param release: release of OpenStack currently deployed
+    @returns boolean Whether memcache should be enabled
+    """
+    if not release:
+        release = get_os_codename_install_source(source)
+    return release >= 'mitaka'
+
+
+def token_cache_pkgs(source=None, release=None):
+    """Determine additional packages needed for token caching
+
+    @param source: source string for charm
+    @param release: release of OpenStack currently deployed
+    @returns List of package to enable token caching
+    """
+    packages = []
+    if enable_memcache(source=source, release=release):
+        packages.extend(['memcached', 'python-memcache'])
+    return packages
