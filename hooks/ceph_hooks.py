@@ -407,6 +407,7 @@ def upgrade_keys():
                                   ceph._default_caps)
 
 
+@hooks.hook('osd-relation-changed')
 @hooks.hook('osd-relation-joined')
 def osd_relation(relid=None):
     if ceph.is_quorum():
@@ -420,6 +421,19 @@ def osd_relation(relid=None):
             'osd_upgrade_key': ceph.get_named_key('osd-upgrade',
                                                   caps=ceph.osd_upgrade_caps),
         }
+
+        unit = remote_unit()
+        settings = relation_get(rid=relid, unit=unit)
+        """Process broker request(s)."""
+        if 'broker_req' in settings:
+            if ceph.is_leader():
+                rsp = process_requests(settings['broker_req'])
+                unit_id = unit.replace('/', '-')
+                unit_response_key = 'broker-rsp-' + unit_id
+                data[unit_response_key] = rsp
+            else:
+                log("Not leader - ignoring broker request", level=DEBUG)
+
         relation_set(relation_id=relid,
                      relation_settings=data)
     else:

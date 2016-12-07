@@ -202,4 +202,14 @@ pool-get:
       description: Any valid Ceph key from http://docs.ceph.com/docs/master/rados/operations/pools/#get-pool-values
   required: [key, pool-name]
   additionalProperties: false
-
+add-disk:
+  description: Add disk(s) to Ceph
+  params:
+    osd-devices:
+      type: string
+      description: The devices to format and set up as osd volumes.
+    bucket:
+      type: string
+      description: The name of the bucket in Ceph to add these devices into
+  required:
+    - osd-devices
