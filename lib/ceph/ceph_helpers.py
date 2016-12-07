@@ -25,6 +25,7 @@
 import errno
 import hashlib
 import math
+from charmhelpers.contrib.network.ip import format_ipv6_addr
 import six
 
 import os
@@ -56,7 +57,8 @@ from charmhelpers.core.host import (mount,
 from charmhelpers.fetch import (apt_install, )
 
 from charmhelpers.core.kernel import modprobe
-from charmhelpers.contrib.openstack.utils import config_flags_parser
+from charmhelpers.contrib.openstack.utils import config_flags_parser, \
+    get_host_ip
 
 KEYRING = '/etc/ceph/ceph.client.{}.keyring'
 KEYFILE = '/etc/ceph/ceph.client.{}.key'
@@ -190,6 +192,11 @@ class Crushmap(object):
         except Exception as e:
             log("load_crushmap error: {}".format(e))
             raise "Failed to read Crushmap"
+
+    def ensure_bucket_is_present(self, bucket_name):
+        if bucket_name not in [bucket.name for bucket in self.buckets()]:
+            self.add_bucket(bucket_name)
+            self.save()
 
     def buckets(self):
         """Return a list of buckets that are in the Crushmap."""
@@ -411,7 +418,7 @@ class Pool(object):
         # highest value is used. To do this, find the nearest power of 2 such
         # that 2^n <= num_pg, check to see if its within the 25% tolerance.
         exponent = math.floor(math.log(num_pg, 2))
-        nearest = 2**exponent
+        nearest = 2 ** exponent
         if (num_pg - nearest) > (num_pg * 0.25):
             # Choose the next highest power of 2 since the nearest is more
             # than 25% below the original value.
@@ -421,7 +428,6 @@ class Pool(object):
 
 
 class ReplicatedPool(Pool):
-
     def __init__(self,
                  service,
                  name,
@@ -455,7 +461,6 @@ class ReplicatedPool(Pool):
 
 # Default jerasure erasure coded pool
 class ErasurePool(Pool):
-
     def __init__(self,
                  service,
                  name,
@@ -1179,6 +1184,30 @@ def ensure_ceph_keyring(service, user=None, group=None, relation='ceph'):
     return True
 
 
+def get_mon_hosts():
+    """
+    Helper function to gather up the ceph monitor host public addresses
+    :return: list. Returns a list of ip_address:port
+    """
+    hosts = []
+    for relid in relation_ids('mon'):
+        for unit in related_units(relid):
+            addr = \
+                relation_get('ceph-public-address',
+                             unit,
+                             relid) or get_host_ip(
+                    relation_get(
+                        'private-address',
+                        unit,
+                        relid))
+
+            if addr:
+                hosts.append('{}:6789'.format(format_ipv6_addr(addr) or addr))
+
+    hosts.sort()
+    return hosts
+
+
 def ceph_version():
     """Retrieve the local version of ceph."""
     if os.path.exists('/usr/bin/ceph'):
@@ -1292,6 +1321,7 @@ class CephBrokerRsp(object):
     @property
     def exit_msg(self):
         return self.rsp.get('stderr')
+
 
 # Ceph Broker Conversation:
 # If a charm needs an action to be taken by ceph it can create a CephBrokerRq
