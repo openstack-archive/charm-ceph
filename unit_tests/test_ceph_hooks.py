@@ -29,7 +29,8 @@ CHARM_CONFIG = {'config-flags': '',
                 'osd-journal-size': 1024,
                 'use-direct-io': True,
                 'osd-format': 'ext4',
-                'prefer-ipv6': False}
+                'prefer-ipv6': False
+                'customize-failure-domain': False}
 
 
 class CephHooksTestCase(unittest.TestCase):
