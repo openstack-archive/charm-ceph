@@ -191,10 +191,21 @@ options:
                 kernel.threads-max: 2097152 }'
     description: |
       YAML-formatted associative array of sysctl key/value pairs to be set
-      persistently. By default we set pid_max, max_map_count and 
+      persistently. By default we set pid_max, max_map_count and
       threads-max to a high value to avoid problems with large numbers (>20)
       of OSDs recovering. very large clusters should set those values even
       higher (e.g. max for kernel.pid_max is 4194303).
+  customize-failure-domain:
+    type: boolean
+    default: false
+    description: |
+      Setting this to true will tell Ceph to replicate across Juju's
+      Availability Zone instead of specifically by host.
+  availability_zone:
+    type: string
+    default: 
+    description: |
+      Custom availablility zone to provide to Ceph for the OSD placement
   nagios_context:
     type: string
     default: "juju"

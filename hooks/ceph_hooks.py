@@ -150,6 +150,19 @@ def install():
     apt_install(packages=ceph.PACKAGES, fatal=True)
 
 
+def az_info():
+    az_info = ""
+    juju_az_info = os.environ.get('JUJU_AVAILABILITY_ZONE')
+    if juju_az_info:
+        az_info = "{} juju_availability_zone={}".format(az_info, juju_az_info)
+    config_az = config("availability_zone")
+    if config_az:
+        az_info = "{} config_availability_zone={}".format(az_info, config_az)
+    if az_info != "":
+        log("AZ Info: " + az_info)
+        return az_info
+
+
 def use_short_objects():
     '''
     Determine whether OSD's should be configured with
@@ -198,6 +211,17 @@ def get_ceph_context():
     else:
         cephcontext['public_addr'] = get_public_addr()
         cephcontext['cluster_addr'] = get_cluster_addr()
+
+    if config('customize-failure-domain'):
+        az = az_info()
+        if az:
+            cephcontext['crush_location'] = "root=default {} host={}" \
+                .format(az, socket.gethostname())
+        else:
+            log(
+                "Your Juju environment doesn't"
+                "have support for Availability Zones"
+            )
 
     # NOTE(dosaboy): these sections must correspond to what is supported in the
     #                config template.
