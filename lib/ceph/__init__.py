@@ -455,6 +455,33 @@ class CrushLocation(object):
         return self.name < other.name
 
 
+def get_osd_weight(osd_id):
+    """
+    Returns the weight of the specified OSD
+    :return: Float :raise: ValueError if the monmap fails to parse.
+      Also raises CalledProcessError if our ceph command fails
+    """
+    try:
+        tree = subprocess.check_output(
+            ['ceph', 'osd', 'tree', '--format=json'])
+        try:
+            json_tree = json.loads(tree)
+            # Make sure children are present in the json
+            if not json_tree['nodes']:
+                return None
+            for device in json_tree['nodes']:
+                if device['type'] == 'osd' and device['name'] == osd_id:
+                    return device['crush_weight']
+        except ValueError as v:
+            log("Unable to parse ceph tree json: {}. Error: {}".format(
+                tree, v.message))
+            raise
+    except subprocess.CalledProcessError as e:
+        log("ceph osd tree command failed with message: {}".format(
+            e.message))
+        raise
+
+
 def get_osd_tree(service):
     """
     Returns the current osd map in JSON.
@@ -1216,12 +1243,12 @@ def osdize_dev(dev, osd_format, osd_journal, reformat_osd=False,
     try:
         log("osdize cmd: {}".format(cmd))
         subprocess.check_call(cmd)
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         if ignore_errors:
             log('Unable to initialize device: {}'.format(dev), WARNING)
         else:
             log('Unable to initialize device: {}'.format(dev), ERROR)
-            raise e
+            raise
 
 
 def osdize_dir(path, encrypt=False):
