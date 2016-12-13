@@ -29,9 +29,6 @@ provides:
     interface: ceph-osd
   radosgw:
     interface: ceph-radosgw
-  nrpe-external-master:
-    interface: nrpe-external-master
-    scope: container
 storage:
   osd-devices:
     type: block
