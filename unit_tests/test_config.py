@@ -72,6 +72,25 @@ class GetDevicesTestCase(test_utils.CharmTestCase):
         self.test_config.set("osd-devices", "{} {}".format(device1, device2))
         self.assertEqual([device1, device2], hooks.get_devices())
 
+    def test_get_devices_extra_spaces(self):
+        """
+        Multiple spaces do not result in additional devices.
+        """
+        device1 = os.path.join(self.tmp_dir, "device1")
+        device2 = os.path.join(self.tmp_dir, "device2")
+        self.test_config.set("osd-devices", "{}  {}".format(device1, device2))
+        self.assertEqual([device1, device2], hooks.get_devices())
+
+    def test_get_devices_non_absolute_path(self):
+        """
+        Charm does not allow relative paths as this may result in a path
+        on the root device/within the charm directory.
+        """
+        device1 = os.path.join(self.tmp_dir, "device1")
+        device2 = "foo"
+        self.test_config.set("osd-devices", "{} {}".format(device1, device2))
+        self.assertEqual([device1], hooks.get_devices())
+
     def test_get_devices_symlink(self):
         """
         If a symlink is specified in osd-devices, get_devices() resolves
