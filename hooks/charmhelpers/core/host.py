@@ -54,6 +54,7 @@ elif __platform__ == "centos":
         cmp_pkgrevno,
     )  # flake8: noqa -- ignore F401 for this import
 
+UPDATEDB_PATH = '/etc/updatedb.conf'
 
 def service_start(service_name):
     """Start a system service"""
@@ -306,15 +307,17 @@ def add_user_to_group(username, group):
     subprocess.check_call(cmd)
 
 
-def rsync(from_path, to_path, flags='-r', options=None):
+def rsync(from_path, to_path, flags='-r', options=None, timeout=None):
     """Replicate the contents of a path"""
     options = options or ['--delete', '--executability']
     cmd = ['/usr/bin/rsync', flags]
+    if timeout:
+        cmd = ['timeout', str(timeout)] + cmd
     cmd.extend(options)
     cmd.append(from_path)
     cmd.append(to_path)
     log(" ".join(cmd))
-    return subprocess.check_output(cmd).decode('UTF-8').strip()
+    return subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('UTF-8').strip()
 
 
 def symlink(source, destination):
@@ -684,7 +687,7 @@ def chownr(path, owner, group, follow_links=True, chowntopdir=False):
     :param str path: The string path to start changing ownership.
     :param str owner: The owner string to use when looking up the uid.
     :param str group: The group string to use when looking up the gid.
-    :param bool follow_links: Also Chown links if True
+    :param bool follow_links: Also follow and chown links if True
     :param bool chowntopdir: Also chown path itself if True
     """
     uid = pwd.getpwnam(owner).pw_uid
@@ -698,7 +701,7 @@ def chownr(path, owner, group, follow_links=True, chowntopdir=False):
         broken_symlink = os.path.lexists(path) and not os.path.exists(path)
         if not broken_symlink:
             chown(path, uid, gid)
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk(path, followlinks=follow_links):
         for name in dirs + files:
             full = os.path.join(root, name)
             broken_symlink = os.path.lexists(full) and not os.path.exists(full)
@@ -749,3 +752,25 @@ def is_container():
     else:
         # Detect using upstart container file marker
         return os.path.exists(UPSTART_CONTAINER_TYPE)
+
+
+def add_to_updatedb_prunepath(path, updatedb_path=UPDATEDB_PATH):
+    with open(updatedb_path, 'r+') as f_id:
+        updatedb_text = f_id.read()
+        output = updatedb(updatedb_text, path)
+        f_id.seek(0)
+        f_id.write(output)
+        f_id.truncate()
+
+
+def updatedb(updatedb_text, new_path):
+    lines = [line for line in updatedb_text.split("\n")]
+    for i, line in enumerate(lines):
+        if line.startswith("PRUNEPATHS="):
+            paths_line = line.split("=")[1].replace('"', '')
+            paths = paths_line.split(" ")
+            if new_path not in paths:
+                paths.append(new_path)
+                lines[i] = 'PRUNEPATHS="{}"'.format(' '.join(paths))
+    output = "\n".join(lines)
+    return output

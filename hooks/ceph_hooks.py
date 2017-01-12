@@ -53,6 +53,7 @@ from charmhelpers.core.host import (
     write_file,
     rsync,
     cmp_pkgrevno,
+    add_to_updatedb_prunepath,
 )
 from charmhelpers.fetch import (
     apt_install,
@@ -294,6 +295,7 @@ def config_changed():
 
     if relations_of_type('nrpe-external-master'):
         update_nrpe_config()
+    add_to_updatedb_prunepath('/var/lib/ceph')
 
 
 @hooks.hook('osd-devices-storage-attached', 'osd-devices-storage-detaching')
