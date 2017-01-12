@@ -53,6 +53,7 @@ from charmhelpers.core.host import (
     write_file,
     rsync,
     cmp_pkgrevno,
+    add_to_updatedb_prunepath,
 )
 from charmhelpers.fetch import (
     apt_install,
@@ -89,6 +90,7 @@ NAGIOS_PLUGINS = '/usr/local/lib/nagios/plugins'
 SCRIPTS_DIR = '/usr/local/bin'
 STATUS_FILE = '/var/lib/nagios/cat-ceph-status.txt'
 STATUS_CRONFILE = '/etc/cron.d/cat-ceph-health'
+STORAGE_MOUNT_PATH = '/var/lib/ceph'
 
 # A dict of valid ceph upgrade paths.  Mapping is old -> new
 upgrade_paths = {
@@ -294,6 +296,7 @@ def config_changed():
 
     if relations_of_type('nrpe-external-master'):
         update_nrpe_config()
+    add_to_updatedb_prunepath(STORAGE_MOUNT_PATH)
 
 
 @hooks.hook('osd-devices-storage-attached', 'osd-devices-storage-detaching')
