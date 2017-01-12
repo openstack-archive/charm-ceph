@@ -149,6 +149,10 @@ def install():
     add_source(config('source'), config('key'))
     apt_update(fatal=True)
     apt_install(packages=ceph.PACKAGES, fatal=True)
+    script = os.path.join('etc', 'updatedb.conf')
+    rsync(os.path.join(os.getenv('CHARM_DIR'), 'files',
+                       'updatedb.conf'),
+          script)
 
 
 def az_info():
