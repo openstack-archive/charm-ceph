@@ -294,6 +294,10 @@ def config_changed():
 
     if relations_of_type('nrpe-external-master'):
         update_nrpe_config()
+    script = os.path.join('etc', 'updatedb.conf')
+    rsync(os.path.join(os.getenv('CHARM_DIR'), 'files',
+                       'updatedb.conf'),
+          script)
 
 
 @hooks.hook('osd-devices-storage-attached', 'osd-devices-storage-detaching')
