@@ -97,7 +97,7 @@ Please refer to the [Ceph Network Reference](http://docs.ceph.com/docs/master/ra
 
 # Contact Information
 
-## Authors 
+## Authors
 
 - Paul Collins <paul.collins@canonical.com>,
 - James Page <james.page@ubuntu.com>
