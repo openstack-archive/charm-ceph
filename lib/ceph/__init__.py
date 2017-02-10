@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from _ctypes import POINTER, byref
 import ctypes
 import collections
 import json
@@ -309,22 +310,52 @@ def set_hdd_read_ahead(dev_name, read_ahead_sectors=256):
 
 def get_block_uuid(block_dev):
     """
-    This queries blkid to get the uuid for a block device.
+    This queries blkid to get the uuid for a block device. Note: This function
+    needs to be called with root priv.  It will raise an error otherwise.
     :param block_dev: Name of the block device to query.
-    :return: The UUID of the device or None on Error.
+    :return: The UUID of the device or None on Error. Raises OSError
     """
     try:
-        block_info = subprocess.check_output(
-            ['blkid', '-o', 'export', block_dev])
-        for tag in block_info.split('\n'):
-            parts = tag.split('=')
-            if parts[0] == 'UUID':
-                return parts[1]
-        return None
-    except subprocess.CalledProcessError as err:
-        log('get_block_uuid failed with error: {}'.format(err.output),
+        blkid = ctypes.cdll.LoadLibrary("libblkid.so")
+        # Header signature
+        # extern int blkid_probe_lookup_value(blkid_probe pr, const char *name,
+        #                                     const char **data, size_t *len);
+        blkid.blkid_new_probe_from_filename.argtypes = [ctypes.c_char_p]
+        blkid.blkid_probe_lookup_value.argtypes = [ctypes.c_void_p,
+                                                   ctypes.c_char_p,
+                                                   POINTER(ctypes.c_char_p),
+                                                   POINTER(ctypes.c_ulong)]
+    except OSError as err:
+        log('get_block_uuid loading libblkid.so failed with error: {}'.format(
+            os.strerror(err.errno)),
             level=ERROR)
+        raise err
+    if not os.path.exists(block_dev):
         return None
+    probe = blkid.blkid_new_probe_from_filename(ctypes.c_char_p(block_dev))
+    if probe < 0:
+        log('get_block_uuid new_probe_from_filename failed: {}'.format(
+            os.strerror(probe)),
+            level=ERROR)
+        raise OSError(probe, os.strerror(probe))
+    result = blkid.blkid_do_probe(probe)
+    if result != 0:
+        log('get_block_uuid do_probe failed with error: {}'.format(
+            os.strerror(result)),
+            level=ERROR)
+        raise OSError(result, os.strerror(result))
+    uuid = ctypes.c_char_p()
+    result = blkid.blkid_probe_lookup_value(probe,
+                                            ctypes.c_char_p(
+                                                'UUID'.encode('ascii')),
+                                            byref(uuid), None)
+    if result < 0:
+        log('get_block_uuid lookup_value failed with error: {}'.format(
+            os.strerror(result)),
+            level=ERROR)
+        raise OSError(result, os.strerror(result))
+    blkid.blkid_free_probe(probe)
+    return ctypes.string_at(uuid).decode('ascii')
 
 
 def check_max_sectors(save_settings_dict,
@@ -390,6 +421,7 @@ def tune_dev(block_dev):
     if uuid is None:
         log('block device {} uuid is None.  Unable to save to '
             'hdparm.conf'.format(block_dev), level=DEBUG)
+        return
     save_settings_dict = {}
     log('Tuning device {}'.format(block_dev))
     status_set('maintenance', 'Tuning device {}'.format(block_dev))
@@ -1430,10 +1462,17 @@ def upgrade_monitor(new_version):
             service_stop('ceph-mon-all')
         apt_install(packages=PACKAGES, fatal=True)
 
-        # Ensure the ownership of Ceph's directories is correct
-        chownr(path=os.path.join(os.sep, "var", "lib", "ceph"),
-               owner=ceph_user(),
-               group=ceph_user())
+        # Ensure the files and directories under /var/lib/ceph is chowned
+        # properly as part of the move to the Jewel release, which moved the
+        # ceph daemons to running as ceph:ceph instead of root:root.
+        if new_version == 'jewel':
+            # Ensure the ownership of Ceph's directories is correct
+            owner = ceph_user()
+            chownr(path=os.path.join(os.sep, "var", "lib", "ceph"),
+                   owner=owner,
+                   group=owner,
+                   follow_links=True)
+
         if systemd():
             for mon_id in get_local_mon_ids():
                 service_start('ceph-mon@{}'.format(mon_id))
@@ -1608,10 +1647,18 @@ def upgrade_osd(new_version):
             service_stop('ceph-osd-all')
         apt_install(packages=PACKAGES, fatal=True)
 
-        # Ensure the ownership of Ceph's directories is correct
-        chownr(path=os.path.join(os.sep, "var", "lib", "ceph"),
-               owner=ceph_user(),
-               group=ceph_user())
+        # Ensure the files and directories under /var/lib/ceph is chowned
+        # properly as part of the move to the Jewel release, which moved the
+        # ceph daemons to running as ceph:ceph instead of root:root. Only do
+        # it when necessary as this is an expensive operation to run.
+        if new_version == 'jewel':
+            owner = ceph_user()
+            status_set('maintenance', 'Updating file ownership for OSDs')
+            chownr(path=os.path.join(os.sep, "var", "lib", "ceph"),
+                   owner=owner,
+                   group=owner,
+                   follow_links=True)
+
         if systemd():
             for osd_id in get_local_osd_ids():
                 service_start('ceph-osd@{}'.format(osd_id))
@@ -1641,7 +1688,6 @@ def list_pools(service):
     except subprocess.CalledProcessError as err:
         log("rados lspools failed with error: {}".format(err.output))
         raise
-
 
 # A dict of valid ceph upgrade paths.  Mapping is old -> new
 UPGRADE_PATHS = {
