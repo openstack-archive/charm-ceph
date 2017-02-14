@@ -422,19 +422,6 @@ def notify_client():
         client_relation_joined(relid)
 
 
-def upgrade_keys():
-    """ Ceph now required mon allow rw for pool creation """
-    if len(relation_ids('radosgw')) > 0:
-        ceph.upgrade_key_caps('client.radosgw.gateway',
-                              ceph._radosgw_caps)
-    for relid in relation_ids('client'):
-        units = related_units(relid)
-        if len(units) > 0:
-            service_name = units[0].split('/')[0]
-            ceph.upgrade_key_caps('client.{}'.format(service_name),
-                                  ceph._default_caps)
-
-
 @hooks.hook('osd-relation-changed')
 @hooks.hook('osd-relation-joined')
 def osd_relation(relid=None):
@@ -555,7 +542,6 @@ def upgrade_charm():
     emit_cephconf()
     apt_install(packages=filter_installed_packages(ceph.PACKAGES), fatal=True)
     ceph.update_monfs()
-    upgrade_keys()
     mon_relation_joined()
     if is_relation_made("nrpe-external-master"):
         update_nrpe_config()
