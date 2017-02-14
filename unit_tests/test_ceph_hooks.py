@@ -145,7 +145,6 @@ class CephHooksTestCase(unittest.TestCase):
                 write_file=DEFAULT,
                 nrpe=DEFAULT,
                 emit_cephconf=DEFAULT,
-                upgrade_keys=DEFAULT,
                 mon_relation_joined=DEFAULT,
                 is_relation_made=DEFAULT) as mocks, patch(
                     "charmhelpers.contrib.hardening.harden.config"):
