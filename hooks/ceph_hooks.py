@@ -115,6 +115,8 @@ def check_for_upgrade():
         return
 
     c = hookenv.config()
+    if c.previous('source') == c('source') and c('source') is None:
+        return
     old_version = c.previous('source')
     log('old_version: {}'.format(old_version))
     # Strip all whitespace
