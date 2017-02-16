@@ -17,6 +17,8 @@ def config_side_effect(*args):
 
 
 class UpgradeRollingTestCase(unittest.TestCase):
+
+    @patch('ceph_hooks.ceph.is_bootstrapped')
     @patch('ceph_hooks.log')
     @patch('ceph_hooks.ceph.roll_monitor_cluster')
     @patch('ceph_hooks.ceph.wait_for_all_monitors_to_upgrade')
@@ -29,7 +31,9 @@ class UpgradeRollingTestCase(unittest.TestCase):
                                hookenv,
                                wait_for_mons,
                                roll_monitor_cluster,
-                               log):
+                               log,
+                               is_bootstrapped):
+        is_bootstrapped.return_value = True
         host.lsb_release.return_value = {
             'DISTRIB_CODENAME': 'trusty',
         }
@@ -60,3 +64,32 @@ class UpgradeRollingTestCase(unittest.TestCase):
                      'upgrade path.  Proceeding.')
             ]
         )
+
+    @patch('ceph_hooks.ceph.is_bootstrapped')
+    @patch('ceph_hooks.log')
+    @patch('ceph_hooks.ceph.roll_monitor_cluster')
+    @patch('ceph_hooks.ceph.wait_for_all_monitors_to_upgrade')
+    @patch('ceph_hooks.hookenv')
+    @patch('ceph_hooks.host')
+    @patch('ceph_hooks.ceph.roll_osd_cluster')
+    def test_check_for_upgrade_not_bootstrapped(self,
+                                                roll_osd_cluster,
+                                                host,
+                                                hookenv,
+                                                wait_for_mons,
+                                                roll_monitor_cluster,
+                                                log,
+                                                is_bootstrapped):
+        is_bootstrapped.return_value = False
+        host.lsb_release.return_value = {
+            'DISTRIB_CODENAME': 'trusty',
+        }
+        previous_mock = MagicMock().return_value
+        previous_mock.previous.return_value = "cloud:trusty-juno"
+        hookenv.config.side_effect = [previous_mock,
+                                      config_side_effect('source')]
+        check_for_upgrade()
+
+        roll_osd_cluster.assert_not_called()
+
+        roll_monitor_cluster.assert_not_called()
