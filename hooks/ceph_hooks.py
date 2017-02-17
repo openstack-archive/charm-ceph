@@ -108,6 +108,10 @@ def pretty_print_upgrade_paths():
 
 
 def check_for_upgrade():
+    if not ceph.is_bootstrapped():
+        log("Ceph is not bootstrapped, skipping upgrade checks.")
+        return
+
     release_info = host.lsb_release()
     if not release_info['DISTRIB_CODENAME'] == 'trusty':
         log("Invalid upgrade path from {}.  Only trusty is currently "
