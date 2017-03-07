@@ -223,10 +223,12 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
             self.keystone_sentry: ['keystone'],
             self.glance_sentry: ['glance-registry',
                                  'glance-api'],
-            self.cinder_sentry: ['cinder-api',
-                                 'cinder-scheduler',
+            self.cinder_sentry: ['cinder-scheduler',
                                  'cinder-volume'],
         }
+
+        if self._get_openstack_release() < self.xenial_ocata:
+            services[self.cinder_sentry].append('cinder-api')
 
         if self._get_openstack_release() < self.xenial_mitaka:
             # For upstart systems only.  Ceph services under systemd
@@ -380,11 +382,19 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         u.log.debug('Checking cinder (rbd) config file data...')
         unit = self.cinder_sentry
         conf = '/etc/cinder/cinder.conf'
+
+        # NOTE(jamespage): Deal with section config for >= ocata.
+        if self._get_openstack_release() >= self.xenial_ocata:
+            section_key = 'CEPH'
+        else:
+            section_key = 'DEFAULT'
+
         expected = {
-            'DEFAULT': {
+            section_key: {
                 'volume_driver': 'cinder.volume.drivers.rbd.RBDDriver'
             }
         }
+
         for section, pairs in expected.iteritems():
             ret = u.validate_config_data(unit, conf, section, pairs)
             if ret:
