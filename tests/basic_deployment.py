@@ -223,10 +223,12 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
             self.keystone_sentry: ['keystone'],
             self.glance_sentry: ['glance-registry',
                                  'glance-api'],
-            self.cinder_sentry: ['cinder-api',
-                                 'cinder-scheduler',
+            self.cinder_sentry: ['cinder-scheduler',
                                  'cinder-volume'],
         }
+
+        if self._get_openstack_release() < self.xenial_ocata:
+            services[self.cinder_sentry].append('cinder-api')
 
         if self._get_openstack_release() < self.xenial_mitaka:
             # For upstart systems only.  Ceph services under systemd
