@@ -32,7 +32,12 @@ from charmhelpers.core.host import (
     chownr,
     service_restart,
     lsb_release,
-    cmp_pkgrevno, service_stop, mounts, service_start)
+    cmp_pkgrevno,
+    service_stop,
+    mounts,
+    service_start,
+    CompareHostReleases,
+)
 from charmhelpers.core.hookenv import (
     log,
     ERROR,
@@ -1153,7 +1158,7 @@ def upgrade_key_caps(key, caps):
 
 @cached
 def systemd():
-    return (lsb_release()['DISTRIB_CODENAME'] >= 'vivid')
+    return (CompareHostReleases(lsb_release()['DISTRIB_CODENAME']) >= 'vivid')
 
 
 def bootstrap_monitor_cluster(secret):
