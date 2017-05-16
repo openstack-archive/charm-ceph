@@ -154,7 +154,7 @@ def install():
     execd_preinstall()
     add_source(config('source'), config('key'))
     apt_update(fatal=True)
-    apt_install(packages=ceph.PACKAGES, fatal=True)
+    apt_install(packages=ceph.determine_packages(), fatal=True)
 
 
 def az_info():
@@ -544,7 +544,8 @@ def client_relation_changed():
 @harden()
 def upgrade_charm():
     emit_cephconf()
-    apt_install(packages=filter_installed_packages(ceph.PACKAGES), fatal=True)
+    apt_install(packages=filter_installed_packages(ceph.determine_packages()),
+                fatal=True)
     ceph.update_monfs()
     mon_relation_joined()
     if is_relation_made("nrpe-external-master"):
