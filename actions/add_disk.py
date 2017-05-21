@@ -59,9 +59,13 @@ def add_device(request, device_path, bucket=None):
 
 
 def get_devices():
-    return [
-        os.path.realpath(path)
-        for path in action_get('osd-devices').split(' ')]
+    devices = []
+    for path in action_get('osd-devices').split(' '):
+        path = path.strip()
+        if os.path.isabs(path):
+            devices.append(path)
+
+    return devices
 
 
 if __name__ == "__main__":
