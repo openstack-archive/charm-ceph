@@ -1299,6 +1299,15 @@ def bootstrap_monitor_cluster(secret):
                 service_restart('ceph-mon')
             else:
                 service_restart('ceph-mon-all')
+
+            if cmp_pkgrevno('ceph', '12.0.0') >= 0:
+                # NOTE(jamespage): Later ceph releases require explicit
+                #                  call to ceph-create-keys to setup the
+                #                  admin keys for the cluster; this command
+                #                  will wait for quorum in the cluster before
+                #                  returning.
+                cmd = ['ceph-create-keys', '--id', hostname]
+                subprocess.check_call(cmd)
         except:
             raise
         finally:
@@ -2060,14 +2069,14 @@ def get_ceph_pg_stat():
 
 def get_ceph_health():
     """
-    Returns the health of the cluster from a 'ceph health'
+    Returns the health of the cluster from a 'ceph status'
     :return: dict
       Also raises CalledProcessError if our ceph command fails
       To get the overall status, use get_ceph_health()['overall_status']
     """
     try:
         tree = check_output(
-            ['ceph', 'health', '--format=json'])
+            ['ceph', 'status', '--format=json'])
         try:
             json_tree = json.loads(tree)
             # Make sure children are present in the json
@@ -2079,7 +2088,7 @@ def get_ceph_health():
                 tree, v.message))
             raise
     except subprocess.CalledProcessError as e:
-        log("ceph osd tree command failed with message: {}".format(
+        log("ceph status command failed with message: {}".format(
             e.message))
         raise
 
@@ -2103,7 +2112,7 @@ def reweight_osd(osd_num, new_weight):
             return True
         return False
     except subprocess.CalledProcessError as e:
-        log("ceph osd tree command failed with message: {}".format(
+        log("ceph osd crush reweight command failed with message: {}".format(
             e.message))
         raise
 
