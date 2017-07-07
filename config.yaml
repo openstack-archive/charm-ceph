@@ -239,3 +239,15 @@ options:
     description: |
       Apply system hardening. Supports a space-delimited list of modules
       to run. Supported modules currently include os, ssh, apache and mysql.
+  default-rbd-features:
+    default:
+    type: int
+    description: |
+      Restrict the rbd features used to the specified level. If set, this will
+      inform clients that they should set the config value `rbd default
+      features`, for example:
+      
+        rbd default features = 1
+
+      This needs to be set to 1 when deploying a cloud with the nova-lxd
+      hypervisor.
