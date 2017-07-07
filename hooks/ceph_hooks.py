@@ -207,6 +207,7 @@ def get_ceph_context():
         'loglevel': config('loglevel'),
         'dio': str(config('use-direct-io')).lower(),
         'short_object_len': use_short_objects(),
+        'bluestore': config('bluestore'),
     }
 
     if config('prefer-ipv6'):
