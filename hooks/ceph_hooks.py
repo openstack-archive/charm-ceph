@@ -207,6 +207,7 @@ def get_ceph_context():
         'loglevel': config('loglevel'),
         'dio': str(config('use-direct-io')).lower(),
         'short_object_len': use_short_objects(),
+        'bluestore': config('bluestore'),
     }
 
     if config('prefer-ipv6'):
@@ -308,7 +309,8 @@ def storage_changed():
     if ceph.is_bootstrapped():
         for dev in get_devices():
             ceph.osdize(dev, config('osd-format'), get_osd_journal(),
-                        reformat_osd(), config('ignore-device-errors'))
+                        reformat_osd(), config('ignore-device-errors'),
+                        bluestore=config('bluestore'))
         ceph.start_osds(get_devices())
 
 
@@ -404,7 +406,8 @@ def mon_relation():
         ceph.wait_for_bootstrap()
         for dev in get_devices():
             ceph.osdize(dev, config('osd-format'), get_osd_journal(),
-                        reformat_osd(), config('ignore-device-errors'))
+                        reformat_osd(), config('ignore-device-errors'),
+                        bluestore=config('bluestore'))
         ceph.start_osds(get_devices())
         ceph.wait_for_quorum()
         notify_osds()
