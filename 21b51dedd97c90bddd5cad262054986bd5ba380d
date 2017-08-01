@@ -1,0 +1,10 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+1: Ryan Beisner <ryan.beisner@canonical.com>
+Code-Review+2: James Page <james.page@canonical.com>
+Workflow+1: James Page <james.page@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 01 Aug 2017 06:24:01 +0000
+Reviewed-on: https://review.openstack.org/489352
+Project: openstack/charm-ceph
+Branch: refs/heads/master
