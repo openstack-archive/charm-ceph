@@ -296,6 +296,8 @@ def config_changed():
         status_set('maintenance', 'Bootstrapping single Ceph MON')
         ceph.bootstrap_monitor_cluster(config('monitor-secret'))
         ceph.wait_for_bootstrap()
+        if cmp_pkgrevno('ceph', '12.0.0') >= 0:
+            ceph.bootstrap_manager_cluster()
 
     storage_changed()
 
@@ -404,6 +406,8 @@ def mon_relation():
         status_set('maintenance', 'Bootstrapping MON cluster')
         ceph.bootstrap_monitor_cluster(config('monitor-secret'))
         ceph.wait_for_bootstrap()
+        if cmp_pkgrevno('ceph', '12.0.0') >= 0:
+            ceph.bootstrap_manager_cluster()
         for dev in get_devices():
             ceph.osdize(dev, config('osd-format'), get_osd_journal(),
                         reformat_osd(), config('ignore-device-errors'),
