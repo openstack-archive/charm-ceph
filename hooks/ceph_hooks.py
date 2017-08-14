@@ -19,8 +19,8 @@ import sys
 import socket
 
 sys.path.append('lib')
-import ceph
-from ceph.ceph_broker import (
+import ceph.utils as ceph
+from ceph.broker import (
     process_requests
 )
 
