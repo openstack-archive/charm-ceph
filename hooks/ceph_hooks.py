@@ -112,12 +112,6 @@ def check_for_upgrade():
         log("Ceph is not bootstrapped, skipping upgrade checks.")
         return
 
-    release_info = host.lsb_release()
-    if not release_info['DISTRIB_CODENAME'] == 'trusty':
-        log("Invalid upgrade path from {}.  Only trusty is currently "
-            "supported".format(release_info['DISTRIB_CODENAME']))
-        return
-
     c = hookenv.config()
     old_version = c.previous('source')
     log('old_version: {}'.format(old_version))
