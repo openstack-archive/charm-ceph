@@ -152,12 +152,12 @@ def install():
 
 def az_info():
     az_info = ""
-    juju_az_info = os.environ.get('JUJU_AVAILABILITY_ZONE')
-    if juju_az_info:
-        az_info = "{} juju_availability_zone={}".format(az_info, juju_az_info)
     config_az = config("availability_zone")
+    juju_az_info = os.environ.get('JUJU_AVAILABILITY_ZONE')
     if config_az:
-        az_info = "{} config_availability_zone={}".format(az_info, config_az)
+        az_info = "{} rack={}".format(az_info, config_az)
+    elif juju_az_info:
+        az_info = "{} rack={}".format(az_info, juju_az_info)
     if az_info != "":
         log("AZ Info: " + az_info)
         return az_info
