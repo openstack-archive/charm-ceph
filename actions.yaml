@@ -2,6 +2,24 @@ pause-health:
   description: Pause ceph health operations across the entire ceph cluster
 resume-health:
   description: Resume ceph health operations across the entire ceph cluster
+get-health:
+  description: Output the current cluster health
+list-host-osds:
+  description: Output a list of OSDs running on a this unit, if it has mounted OSDs
+disk-for-osd:
+  description: Output the backing disk for an OSD
+  params:
+    osd:
+      type: string
+      description: The OSD number to fetch backing device for
+  required: [osd]
+osd-for-disk:
+  description: Output the OSD mounted on a given disk
+  params:
+    device:
+      type: string
+      description: The full device path to return an OSD ID for
+  required: [device]
 pause:
   description: |
     CAUTION - Set the local osd units in the charm to 'out' but does not stop

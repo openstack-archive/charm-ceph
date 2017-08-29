@@ -1,0 +1,6 @@
+#!/usr/bin/python
+
+from ceph_ops import list_host_osds
+
+if __name__ == '__main__':
+    list_host_osds()
