@@ -1,0 +1,6 @@
+#!/usr/bin/python
+
+from ceph_ops import osd_for_disk
+
+if __name__ == '__main__':
+    osd_for_disk()

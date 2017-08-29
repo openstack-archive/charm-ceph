@@ -661,3 +661,20 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         assert u.wait_on_action(action_id), "Resume action failed."
         assert u.status_get(sentry_unit)[0] == "active"
         u.log.debug('OK')
+
+    def test_920_get_cluster_health(self):
+        """The cluster health is HEALTH_OK. """
+        u.log.debug('Checking cluster health...')
+        sentry_unit = self.ceph0_sentry
+
+        assert u.status_get(sentry_unit)[0] == "active"
+
+        action_id = u.run_action(sentry_unit, "get-health")
+        assert u.wait_on_action(action_id), "get-health action failed."
+        assert u.status_get(sentry_unit)[0] == "maintenance"
+
+        action_id = u.run_action(sentry_unit, "resume")
+        assert u.wait_on_action(action_id), "Resume action failed."
+        assert u.status_get(sentry_unit)[0] == "active"
+        u.log.debug('OK')
+
