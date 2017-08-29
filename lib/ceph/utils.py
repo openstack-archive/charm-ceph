@@ -1395,7 +1395,7 @@ def osdize_dev(dev, osd_format, osd_journal, reformat_osd=False,
         if encrypt:
             cmd.append('--dmcrypt')
     if cmp_pkgrevno('ceph', '0.48.3') >= 0:
-        if osd_format:
+        if osd_format and not bluestore:
             cmd.append('--fs-type')
             cmd.append(osd_format)
 
