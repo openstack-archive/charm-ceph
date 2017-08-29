@@ -1,0 +1,6 @@
+#!/usr/bin/python
+
+from ceph_ops import get_health
+
+if __name__ == '__main__':
+    get_health()

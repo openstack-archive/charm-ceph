@@ -13,7 +13,10 @@
 # limitations under the License.
 
 from subprocess import CalledProcessError, check_output
+import psutil
 import sys
+import os
+import glob
 
 sys.path.append('hooks')
 
@@ -53,6 +56,64 @@ def list_pools():
             rados.NoData,
             rados.NoSpace,
             rados.PermissionError) as e:
+        action_fail(e.message)
+
+
+def osd_for_disk():
+    target_device = action_get("device")
+    disks = psutil.disk_partitions()
+    for dev, mountpoint in disks.iteritems():
+        if dev == target_device:
+            whoami_file = '{}/whoami'.format(mountpoint)
+            with open(whoami_file, 'rb') as whoami:
+                try:
+                    value = whoami.read()
+                    return value.rstrip()
+                except IOError:
+                    action_fail('Could not read file {}'.format(whoami_file))
+
+
+def disk_for_osd():
+    osd = action_get("osd")
+    whoami_path = '/var/lib/ceph/osd/ceph-{}'.format(osd)
+    try:
+        device = os.stat(whoami_path).st_dev
+    except:
+        action_fail(
+            'Could resolve OSD {}, checked {}'.format(
+                osd, whoami_path
+            ))
+    else:
+        return device
+
+
+def get_health():
+    try:
+        value = check_output(['ceph', '-s'])
+        return value
+    except CalledProcessError as e:
+        action_fail(e.message)
+
+
+def list_host_osds():
+    osd_ids = []
+    osds = glob.glob('/var/lib/ceph/osd/ceph-[0-9]+')
+    for osd in osds:
+        osd_id = osd.split('-', 2)
+        try:
+            int(osd_id)
+            osd_ids.extend(osd_id)
+        except:
+            action_fail('Failed to parse OSD ID {}'.format(osd_id))
+
+
+def list_osds():
+    key = action_get("key")
+    pool_name = action_get("pool_name")
+    try:
+        value = check_output(['ceph', 'osd', 'pool', 'get', pool_name, key])
+        return value
+    except CalledProcessError as e:
         action_fail(e.message)
 
 
