@@ -201,6 +201,7 @@ def get_ceph_context():
         'dio': str(config('use-direct-io')).lower(),
         'short_object_len': use_short_objects(),
         'bluestore': config('bluestore'),
+        'bluestore_experimental': cmp_pkgrevno('ceph', '12.1.0') < 0,
     }
 
     if config('prefer-ipv6'):
