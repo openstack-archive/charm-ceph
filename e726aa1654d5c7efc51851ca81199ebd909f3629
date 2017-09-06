@@ -1,0 +1,9 @@
+Code-Review+2: Edward Hope-Morley <edward.hope-morley@canonical.com>
+Workflow+1: Edward Hope-Morley <edward.hope-morley@canonical.com>
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 06 Sep 2017 09:40:26 +0000
+Reviewed-on: https://review.openstack.org/501137
+Project: openstack/charm-ceph
+Branch: refs/heads/master
