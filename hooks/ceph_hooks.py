@@ -225,6 +225,9 @@ def get_ceph_context():
                 "have support for Availability Zones"
             )
 
+    if config('default-rbd-features'):
+        cephcontext['rbd_features'] = config('default-rbd-features')
+
     # NOTE(dosaboy): these sections must correspond to what is supported in the
     #                config template.
     sections = ['global', 'mds', 'osd', 'mon']
@@ -519,8 +522,8 @@ def client_relation_joined(relid=None):
             data = {'key': ceph.get_named_key(service_name),
                     'auth': config('auth-supported'),
                     'ceph-public-address': public_addr}
-            if config('rbd-features'):
-                data['rbd_features'] = config('rbd-features')
+            if config('default-rbd-features'):
+                data['rbd_features'] = config('default-rbd-features')
             relation_set(relation_id=relid,
                          relation_settings=data)
     else:

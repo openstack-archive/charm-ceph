@@ -31,7 +31,8 @@ CHARM_CONFIG = {'config-flags': '',
                 'osd-format': 'ext4',
                 'prefer-ipv6': False,
                 'customize-failure-domain': False,
-                'bluestore': False}
+                'bluestore': False,
+                'default-rbd-features': None}
 
 
 class CephHooksTestCase(unittest.TestCase):
@@ -157,6 +158,39 @@ class CephHooksTestCase(unittest.TestCase):
                     'short_object_len': True,
                     'use_syslog': 'true',
                     'bluestore': True,
+                    'bluestore_experimental': True}
+        self.assertEqual(ctxt, expected)
+
+    @patch.object(ceph_hooks, 'get_public_addr', lambda *args: "10.0.0.1")
+    @patch.object(ceph_hooks, 'get_cluster_addr', lambda *args: "10.1.0.1")
+    @patch.object(ceph_hooks, 'cmp_pkgrevno',
+                  lambda pkg, ver: -1 if ver == '12.1.0' else 1)
+    @patch.object(ceph_hooks, 'get_mon_hosts', lambda *args: ['10.0.0.1',
+                                                              '10.0.0.2'])
+    @patch.object(ceph_hooks, 'get_networks', lambda *args: "")
+    @patch.object(ceph, 'config')
+    @patch.object(ceph_hooks, 'config')
+    def test_get_ceph_context_rbd_features(self, mock_config, mock_config2):
+        config = copy.deepcopy(CHARM_CONFIG)
+        config['default-rbd-features'] = 1
+        mock_config.side_effect = lambda key: config[key]
+        mock_config2.side_effect = lambda key: config[key]
+        ctxt = ceph_hooks.get_ceph_context()
+        expected = {'auth_supported': False,
+                    'ceph_cluster_network': '',
+                    'ceph_public_network': '',
+                    'cluster_addr': '10.1.0.1',
+                    'dio': 'true',
+                    'fsid': '1234',
+                    'loglevel': 1,
+                    'mon_hosts': '10.0.0.1 10.0.0.2',
+                    'old_auth': False,
+                    'osd_journal_size': 1024,
+                    'public_addr': '10.0.0.1',
+                    'short_object_len': True,
+                    'use_syslog': 'true',
+                    'rbd_features': 1,
+                    'bluestore': False,
                     'bluestore_experimental': True}
         self.assertEqual(ctxt, expected)
 
