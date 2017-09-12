@@ -242,7 +242,7 @@ options:
     description: |
       Apply system hardening. Supports a space-delimited list of modules
       to run. Supported modules currently include os, ssh, apache and mysql.
-  default-rbd-features:
+  rbd-features:
     default:
     type: int
     description: |
