@@ -29,6 +29,8 @@ provides:
     interface: ceph-osd
   radosgw:
     interface: ceph-radosgw
+  bootstrap-source:
+    interface: ceph-bootstrap
 storage:
   osd-devices:
     type: block
