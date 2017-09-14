@@ -2,9 +2,11 @@ bin
 .idea
 .coverage
 .testrepository
+.stestr
 .tox
 *.sw[nop]
 .idea
 *.pyc
 .unit-state.db
 func-results.json
+.pydevproject
