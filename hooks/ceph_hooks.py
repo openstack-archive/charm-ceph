@@ -17,6 +17,7 @@
 import os
 import sys
 import socket
+import subprocess
 
 sys.path.append('lib')
 import ceph.utils as ceph
@@ -47,6 +48,7 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.core.host import (
     service_restart,
+    service_pause,
     umount,
     mkdir,
     write_file,
@@ -62,7 +64,10 @@ from charmhelpers.fetch import (
     get_upstream_version,
 )
 from charmhelpers.payload.execd import execd_preinstall
-from charmhelpers.contrib.openstack.alternatives import install_alternative
+from charmhelpers.contrib.openstack.alternatives import (
+    install_alternative,
+    remove_alternative,
+)
 from charmhelpers.contrib.network.ip import (
     get_ipv6_addr,
     format_ipv6_addr,
@@ -235,10 +240,14 @@ def get_ceph_context():
     return cephcontext
 
 
+def ceph_conf_path():
+    return "/var/lib/charm/{}/ceph.conf".format(service_name())
+
+
 def emit_cephconf():
     # Install ceph.conf as an alternative to support
     # co-existence with other charms that write this file
-    charm_ceph_conf = "/var/lib/charm/{}/ceph.conf".format(service_name())
+    charm_ceph_conf = ceph_conf_path()
     mkdir(os.path.dirname(charm_ceph_conf), owner=ceph.ceph_user(),
           group=ceph.ceph_user())
     render('ceph.conf', charm_ceph_conf, get_ceph_context(), perms=0o644)
@@ -553,6 +562,19 @@ def client_relation_changed():
         log('mon cluster not in quorum', level=DEBUG)
 
 
+@hooks.hook('bootstrap-source-relation-joined')
+def bootstrap_source_joined(relid=None):
+    """Provide required information to bootstrap ceph-mon cluster"""
+    if ceph.is_quorum():
+        source = {
+            'fsid': config('fsid'),
+            'monitor-secret': config('monitor-secret'),
+            'ceph-public-address': get_public_addr(),
+        }
+        relation_set(relation_id=relid,
+                     relation_settings=source)
+
+
 @hooks.hook('upgrade-charm.real')
 @harden()
 def upgrade_charm():
@@ -651,6 +673,28 @@ def assess_status():
 @harden()
 def update_status():
     log('Updating status.')
+
+
+@hooks.hook('stop')
+def stop():
+    # NOTE(jamespage)
+    # Ensure monitor is removed from monmap prior to shutdown
+    # otherwise we end up with odd quorum loss issues during
+    # migration.
+    cmd = ['ceph', 'mon', 'rm', socket.gethostname()]
+    subprocess.check_call(cmd)
+    # NOTE(jamespage)
+    # Pause MON and MGR processes running on this unit, leaving
+    # any OSD processes running, supporting the migration to
+    # using the ceph-mon charm.
+    service_pause('ceph-mon')
+    if cmp_pkgrevno('ceph', '12.0.0') >= 0:
+        service_pause('ceph-mgr@{}'.format(socket.gethostname()))
+    # NOTE(jamespage)
+    # Remove the ceph.conf provided by this charm so
+    # that the ceph.conf from other deployed applications
+    # can take priority post removal.
+    remove_alternative('ceph.conf', ceph_conf_path())
 
 
 if __name__ == '__main__':
