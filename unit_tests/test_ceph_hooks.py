@@ -15,7 +15,7 @@
 import copy
 import unittest
 
-from mock import patch, DEFAULT
+from mock import patch, DEFAULT, call
 
 import charmhelpers.contrib.storage.linux.ceph as ceph
 import ceph_hooks
@@ -287,3 +287,47 @@ class CephHooksTestCase(unittest.TestCase):
             ceph_hooks.upgrade_charm()
         mocks["apt_install"].assert_called_with(
             ["python-dbus", "lockfile-progs"])
+
+
+class StopHookTestCase(unittest.TestCase):
+
+    @patch.object(ceph_hooks, 'ceph_conf_path')
+    @patch.object(ceph_hooks, 'socket')
+    @patch.object(ceph_hooks, 'subprocess')
+    @patch.object(ceph_hooks, 'service_pause')
+    @patch.object(ceph_hooks, 'cmp_pkgrevno')
+    @patch.object(ceph_hooks, 'remove_alternative')
+    def _test_stop(self,
+                   remove_alternative,
+                   cmp_pkgrevno,
+                   service_pause,
+                   subprocess,
+                   socket,
+                   ceph_conf_path,
+                   ceph_mgr=False):
+        if ceph_mgr:
+            cmp_pkgrevno.return_value = 1
+        else:
+            cmp_pkgrevno.return_value = -1
+        socket.gethostname.return_value = 'myself'
+        ceph_conf_path.return_value = '/var/lib/charm/me/ceph.conf'
+        ceph_hooks.stop()
+        subprocess.check_call.assert_called_with(
+            ['ceph', 'mon', 'rm', 'myself']
+        )
+        if ceph_mgr:
+            service_pause.assert_has_calls([
+                call('ceph-mon'),
+                call('ceph-mgr@myself')
+            ])
+        else:
+            service_pause.assert_called_once_with('ceph-mon')
+
+        remove_alternative.assert_called_with('ceph.conf',
+                                              '/var/lib/charm/me/ceph.conf')
+
+    def test_stop_jewel(self):
+        self._test_stop()
+
+    def test_stop_luminous(self):
+        self._test_stop(ceph_mgr=True)
