@@ -2,6 +2,7 @@ bin
 .idea
 .coverage
 .testrepository
+.stestr
 .tox
 *.sw[nop]
 .idea

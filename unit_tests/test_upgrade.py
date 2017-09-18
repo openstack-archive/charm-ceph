@@ -18,6 +18,7 @@ def config_side_effect(*args):
 
 class UpgradeRollingTestCase(unittest.TestCase):
 
+    @patch('ceph_hooks.ceph.resolve_ceph_version')
     @patch('ceph_hooks.ceph.is_bootstrapped')
     @patch('ceph_hooks.log')
     @patch('ceph_hooks.ceph.roll_monitor_cluster')
@@ -30,7 +31,9 @@ class UpgradeRollingTestCase(unittest.TestCase):
                                wait_for_mons,
                                roll_monitor_cluster,
                                log,
-                               is_bootstrapped):
+                               is_bootstrapped,
+                               version):
+        version.side_effect = ['firefly', 'hammer']
         is_bootstrapped.return_value = True
         previous_mock = MagicMock().return_value
         previous_mock.previous.return_value = "cloud:trusty-juno"
@@ -39,23 +42,23 @@ class UpgradeRollingTestCase(unittest.TestCase):
         check_for_upgrade()
 
         wait_for_mons.assert_called_with(
-            new_version='cloud:trusty-kilo',
+            new_version='hammer',
             upgrade_key='admin'
         )
         roll_osd_cluster.assert_called_with(
-            new_version='cloud:trusty-kilo',
+            new_version='hammer',
             upgrade_key='admin'
         )
 
         roll_monitor_cluster.assert_called_with(
-            new_version='cloud:trusty-kilo',
+            new_version='hammer',
             upgrade_key='admin'
         )
         log.assert_has_calls(
             [
-                call('old_version: cloud:trusty-juno'),
-                call('new_version: cloud:trusty-kilo'),
-                call('cloud:trusty-juno to cloud:trusty-kilo is a valid '
+                call('old_version: firefly'),
+                call('new_version: hammer'),
+                call('firefly to hammer is a valid '
                      'upgrade path.  Proceeding.')
             ]
         )
