@@ -60,7 +60,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
            """
         this_service = {'name': 'ceph', 'units': 3}
         other_services = [
-            {'name': 'percona-cluster', 'constraints': {'mem': '3072M'}},
+            {'name': 'percona-cluster'},
             {'name': 'keystone'},
             {'name': 'rabbitmq-server'},
             {'name': 'nova-compute'},
@@ -99,7 +99,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         keystone_config = {'admin-password': 'openstack',
                            'admin-token': 'ubuntutesting'}
         pxc_config = {
-            'dataset-size': '25%',
+            'innodb-buffer-pool-size': '256M',
             'max-connections': 1000,
             'root-password': 'ChangeMe123',
             'sst-password': 'ChangeMe123',
