@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from subprocess import CalledProcessError, check_output
+import rados
 import psutil
 import sys
 import os
@@ -20,7 +21,6 @@ import glob
 
 sys.path.append('hooks')
 
-import rados
 from charmhelpers.core.hookenv import log, action_get, action_fail
 from charmhelpers.contrib.storage.linux.ceph import pool_set, \
     set_pool_quota, snapshot_pool, remove_pool_snapshot
@@ -65,10 +65,11 @@ def osd_for_disk():
     for dev, mountpoint in disks.iteritems():
         if dev == target_device:
             whoami_file = '{}/whoami'.format(mountpoint)
-            with open(whoami_file, 'rb') as whoami:
+            with open(whoami_file, 'r') as whoami:
                 try:
-                    value = whoami.read()
-                    return value.rstrip()
+                    value = whoami.read().rstrip()
+                    whoami.close()
+                    return value
                 except IOError:
                     action_fail('Could not read file {}'.format(whoami_file))
 
@@ -89,7 +90,7 @@ def disk_for_osd():
 
 def get_health():
     try:
-        value = check_output(['ceph', '-s'])
+        value = check_output(['ceph', 'health'])
         return value
     except CalledProcessError as e:
         action_fail(e.message)
@@ -99,12 +100,13 @@ def list_host_osds():
     osd_ids = []
     osds = glob.glob('/var/lib/ceph/osd/ceph-[0-9]+')
     for osd in osds:
-        osd_id = osd.split('-', 2)
+        osd_id = osd.split('-')[-1]
         try:
             int(osd_id)
             osd_ids.extend(osd_id)
         except:
             action_fail('Failed to parse OSD ID {}'.format(osd_id))
+    return osd_ids
 
 
 def list_osds():

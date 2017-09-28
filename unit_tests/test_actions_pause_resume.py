@@ -30,7 +30,6 @@ with mock.patch('charmhelpers.contrib.hardening.harden.harden') as mock_dec:
     # import ceph_hooks as hooks
     import pause_resume as actions
 
-
 class PauseTestCase(CharmTestCase):
 
     def setUp(self):
