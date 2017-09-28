@@ -60,7 +60,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
            """
         this_service = {'name': 'ceph', 'units': 3}
         other_services = [
-            {'name': 'percona-cluster', 'constraints': {'mem': '3072M'}},
+            {'name': 'percona-cluster'},
             {'name': 'keystone'},
             {'name': 'rabbitmq-server'},
             {'name': 'nova-compute'},
@@ -99,7 +99,7 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         keystone_config = {'admin-password': 'openstack',
                            'admin-token': 'ubuntutesting'}
         pxc_config = {
-            'dataset-size': '25%',
+            'innodb-buffer-pool-size': '256M',
             'max-connections': 1000,
             'root-password': 'ChangeMe123',
             'sst-password': 'ChangeMe123',
@@ -555,11 +555,14 @@ class CephBasicDeployment(OpenStackAmuletDeployment):
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
 
-        # Validate ceph cinder pool disk space usage samples over time
-        ret = u.validate_ceph_pool_samples(pool_size_samples,
-                                           "cinder pool disk usage")
-        if ret:
-            amulet.raise_status(amulet.FAIL, msg=ret)
+        # Luminous (pike) ceph seems more efficient at disk usage so we cannot
+        # grantee the ordering of kb_used
+        if self._get_openstack_release() < self.xenial_pike:
+            # Validate ceph cinder pool disk space usage samples over time
+            ret = u.validate_ceph_pool_samples(pool_size_samples,
+                                               "cinder pool disk usage")
+            if ret:
+                amulet.raise_status(amulet.FAIL, msg=ret)
 
     def test_412_ceph_glance_image_create_delete(self):
         """Create and confirm a ceph-backed glance image, and inspect
