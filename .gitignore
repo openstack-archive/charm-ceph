@@ -9,3 +9,4 @@ bin
 *.pyc
 .unit-state.db
 func-results.json
+.pydevproject

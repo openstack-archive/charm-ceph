@@ -1,10 +1,20 @@
 # Overview
 
+---
+**NOTE**
+
+This charm is deprecated and will not receive updates past February 2018.
+
+Existing users should refer to [Appendix A](https://docs.openstack.org/charm-deployment-guide/latest/)
+of the Charm Deployment Guide for details of how to migration existing
+deployments to the preferred ceph-mon and ceph-osd charms.
+
+---
+
 Ceph is a distributed storage and network file system designed to provide
 excellent performance, reliability, and scalability.
 
 This charm deploys a Ceph cluster.
-
 
 # Usage
 
