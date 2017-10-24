@@ -31,7 +31,7 @@ from charmhelpers.contrib.storage.linux.ceph import (
     send_request_if_needed,
 )
 
-import ceph
+import ceph.utils as ceph
 
 from ceph_hooks import (
     get_journal_devices,
