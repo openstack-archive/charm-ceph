@@ -1,0 +1,10 @@
+Code-Review+1: Corey Bryant <corey.bryant@canonical.com>
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: James Page <james.page@canonical.com>
+Workflow+1: James Page <james.page@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 30 Oct 2017 11:19:41 +0000
+Reviewed-on: https://review.openstack.org/514607
+Project: openstack/charm-ceph
+Branch: refs/heads/master
