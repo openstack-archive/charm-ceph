@@ -313,7 +313,7 @@ class StopHookTestCase(unittest.TestCase):
         ceph_conf_path.return_value = '/var/lib/charm/me/ceph.conf'
         ceph_hooks.stop()
         subprocess.check_call.assert_called_with(
-            ['ceph', 'mon', 'rm', 'myself']
+            ['ceph', 'mon', 'remove', 'myself']
         )
         if ceph_mgr:
             service_pause.assert_has_calls([

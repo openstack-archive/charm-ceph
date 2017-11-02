@@ -667,7 +667,8 @@ def stop():
     # Ensure monitor is removed from monmap prior to shutdown
     # otherwise we end up with odd quorum loss issues during
     # migration.
-    cmd = ['ceph', 'mon', 'rm', socket.gethostname()]
+    # NOTE(jamespage): remove is compat with >= firefly
+    cmd = ['ceph', 'mon', 'remove', socket.gethostname()]
     subprocess.check_call(cmd)
     # NOTE(jamespage)
     # Pause MON and MGR processes running on this unit, leaving
