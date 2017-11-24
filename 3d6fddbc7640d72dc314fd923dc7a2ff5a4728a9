@@ -1,0 +1,9 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Andrew McLeod <andrew.mcleod@canonical.com>
+Workflow+1: Andrew McLeod <andrew.mcleod@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Fri, 24 Nov 2017 00:25:00 +0000
+Reviewed-on: https://review.openstack.org/522325
+Project: openstack/charm-ceph
+Branch: refs/heads/master
