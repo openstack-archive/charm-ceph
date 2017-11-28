@@ -1,0 +1,9 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Ryan Beisner <ryan.beisner@canonical.com>
+Workflow+1: Ryan Beisner <ryan.beisner@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 28 Nov 2017 13:42:19 +0000
+Reviewed-on: https://review.openstack.org/523386
+Project: openstack/charm-ceph
+Branch: refs/heads/stable/17.08
