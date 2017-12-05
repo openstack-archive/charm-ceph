@@ -5,7 +5,7 @@
 
 This charm is deprecated and will not receive updates past February 2018.
 
-Existing users should refer to [Appendix A](https://docs.openstack.org/charm-deployment-guide/latest/)
+Existing users should refer to [Appendix A](https://docs.openstack.org/project-deploy-guide/charm-deployment-guide/latest/app-ceph-migration.html).
 of the Charm Deployment Guide for details of how to migration existing
 deployments to the preferred ceph-mon and ceph-osd charms.
 
