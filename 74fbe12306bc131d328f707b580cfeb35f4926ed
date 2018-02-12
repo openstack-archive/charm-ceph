@@ -1,0 +1,9 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Liam Young <liam.young@canonical.com>
+Workflow+1: Liam Young <liam.young@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 12 Feb 2018 13:41:46 +0000
+Reviewed-on: https://review.openstack.org/525788
+Project: openstack/charm-ceph
+Branch: refs/heads/stable/17.11
