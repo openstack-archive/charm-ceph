@@ -12,6 +12,7 @@ tags:
 series:
   - xenial
   - artful
+  - bionic
   - zesty
   - trusty
 peers:
