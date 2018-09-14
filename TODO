@@ -1,6 +1,0 @@
-Ceph Charm
-==========
-
- * fix tunables (http://tracker.newdream.net/issues/2210)
- * more than 192 PGs
- * fixup data placement in crush to be host not osd driven
